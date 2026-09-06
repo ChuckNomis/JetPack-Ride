@@ -122,6 +122,16 @@ stateDiagram-v2
 
 **Licence note:** All visual assets and sound effects utilized are created internally or sourced under CC0 / Public Domain licences, ensuring fully compliant academic presentation and build distribution.
 
+### Asset Previews
+
+| Logo | Splash Art | Menu Background |
+|---|---|---|
+| ![Logo](assets/sprites/Logo.png) | ![Splash Art](assets/sprites/SplashArt.png) | ![Menu](assets/sprites/Menu.png) |
+
+| Player Fly | Player Dead | Rocket | Zapper |
+|---|---|---|---|
+| ![Player Fly](assets/sprites/PlayerFly.png) | ![Player Dead](assets/sprites/PlayerDead.png) | ![Rocket](assets/sprites/Rocket.png) | ![Zapper](assets/sprites/Zapper1.png) |
+
 **Technical art rules:**
 - Pixel / Crisp Unlit Vector aesthetic (Filter Mode: Point / Bilinear depending on art style).
 - Pixels Per Unit (PPU): 100.
@@ -170,19 +180,19 @@ graph TD
 ## 8. Scope
 
 ### 8.1 MVP — Core Playable Game
-- [x] Smooth endless horizontal parallax background scrolling with distance tracking score.
-- [x] Base Jetpack physics (Hold to thrust, release to fall).
-- [x] Basic hazard obstacle pooling (Static Electric Zappers).
-- [x] Single Boss encounter spawning at 1,000m with 1 telegraphed attack pattern.
-- [x] Collectible missile crates during boss phase to damage and defeat the boss.
-- [x] Restart loop without scene reloads.
+- [ ] Smooth endless horizontal parallax background scrolling with distance tracking score.
+- [ ] Base Jetpack physics (Hold to thrust, release to fall).
+- [ ] Basic hazard obstacle pooling (Static Electric Zappers).
+- [ ] Single Boss encounter spawning at 1,000m with 1 telegraphed attack pattern.
+- [ ] Collectible missile crates during boss phase to damage and defeat the boss.
+- [ ] Restart loop without scene reloads.
 
 ### 8.2 Polish — Target Course Features
-- [x] Implementation of all 3 distinct vehicles (Motorbike, Profit Bird, Gravity Suit).
-- [x] Vehicle pickup boxes spawning randomly during endless run.
-- [x] Boss phase transition polish (warning siren UI, background parallax slowdown, camera shake).
-- [x] Speed scaling ramp after each successful boss defeat.
-- [x] Particle FX for jetpack sparks, explosion bursts, and vehicle destruction.
+- [ ] Implementation of all 3 distinct vehicles (Motorbike, Profit Bird, Gravity Suit).
+- [ ] Vehicle pickup boxes spawning randomly during endless run.
+- [ ] Boss phase transition polish (warning siren UI, background parallax slowdown, camera shake).
+- [ ] Speed scaling ramp after each successful boss defeat.
+- [ ] Particle FX for jetpack sparks, explosion bursts, and vehicle destruction.
 
 ### 8.3 Explicitly Out of Scope
 - **No Coins or Currency Systems:** Zero pickup coins, banking, or score-to-cash conversions.
