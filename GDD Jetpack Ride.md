@@ -5,7 +5,7 @@
 | **Working title** | Jetpack Boss Fighter |
 | **Team** | Nadav Simon, Alfredo Limin |
 | **Genre** |Endless Runner|
-| **Target platform** | WebGL |
+| **Target platform** | PC / WebGL |
 | **Engine / Unity version** | Unity 6 (6000.3.12f1), URP 2D |
 | **Orientation & reference resolution** | Landscape, 1920 × 1080 reference |
 | **Expected session length** | 2 – 8 minutes |
