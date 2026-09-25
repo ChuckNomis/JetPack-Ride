@@ -62,6 +62,8 @@ Unity Hub refuses to create a new project directly into an already-existing fold
 
 **Anyone repeating this on a case-insensitive filesystem (Windows/default macOS): do not name a sibling folder `assets` next to Unity's `Assets` — use `Assets/Source/` (or similarly nested) from the start.**
 
+**Second Windows gotcha found during the same step:** repo-local `git config core.ignorecase` defaulted to `true`. With it on, `git add Assets` silently recorded the new files under the old lowercase `assets` casing already present in the index (case-folded), instead of the real `Assets` casing on disk — a repo tracked that way could fail to open as a Unity project on a case-sensitive checkout (Linux CI, etc.). Fixed by running `git config core.ignorecase false` in this repo before staging Task 0.1's files; `git add -A` then correctly showed clean `assets/... -> Assets/Source/...` renames. Anyone cloning this repo fresh on Windows should also set `core.ignorecase false` locally before touching `Assets/`.
+
 - [x] **Step 3: Add Input System and Test Framework packages** — done 2026-09-25, no manual edit needed.
 
 Checked `Packages/manifest.json`: the "2D (URP)" template on this editor version (6000.3.20f1) already resolved `com.unity.inputsystem` (1.19.0) and `com.unity.test-framework` (1.6.0) — both above the floors below. No standalone `com.unity.textmeshpro` entry exists because Unity 6's `com.unity.ugui` (2.0.0, present) now bundles TextMeshPro core — this replaces the old separate package. Floors for reference (already satisfied, no edit made):
