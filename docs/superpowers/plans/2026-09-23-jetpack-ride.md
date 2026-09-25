@@ -181,7 +181,7 @@ git commit -m "chore: create project folder structure and import source art/audi
 **Interfaces:**
 - Produces: `GameConfig` with public read-only properties `BaseScrollSpeed`, `ScrollSpeedPerMeter`, `MaxScrollSpeed`, `JetpackThrust`, `GravityScale`, `BaseObstacleSpawnInterval`, `MinObstacleSpawnInterval`, `BaseRocketSpawnInterval`, `MinRocketSpawnInterval`, `DifficultyRampDistance`, `DifficultyCurve` (AnimationCurve), `RocketAggressionCurve` (AnimationCurve), `CoinValue` (int), `RestartLockoutSeconds` (float). Consumed by `DifficultyEvaluator` (Task 1.2), `GameManager` (Task 2.1), `PlayerController` (Task 3.1), `SpawnManager` (Task 5.1).
 
-- [ ] **Step 1: Write `GameConfig.cs`**
+- [x] **Step 1: Write `GameConfig.cs`**
 
 ```csharp
 using UnityEngine;
@@ -237,16 +237,16 @@ namespace JetpackRide.Core
 }
 ```
 
-- [ ] **Step 2: Open editor, confirm no compile errors**
+- [x] **Step 2: Open editor, confirm no compile errors**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
 Expected: exit code 0, no `CS` compiler errors in output.
 
-- [ ] **Step 3: Create the asset instance in-editor**
+- [x] **Step 3: Create the asset instance in-editor**
 
 In Project window: `Assets/ScriptableObjects/` → right-click → Create → Jetpack Ride → Game Config → name it `GameConfig`. Leave default values (they already match the GDD table's "first guess" column).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Assets/Scripts/Core/GameConfig.cs Assets/ScriptableObjects/GameConfig.asset Assets/ScriptableObjects/GameConfig.asset.meta Assets/Scripts/Core/GameConfig.cs.meta
