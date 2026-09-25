@@ -48,7 +48,7 @@
 **Interfaces:**
 - Produces: a Unity project rooted at the repo root, with `Assets/`, `Packages/`, `ProjectSettings/` alongside `GDD Jetpack Ride.md`, `README.md`. (Source art/audio live inside `Assets/Source/`, not a sibling `assets/` — see Task 0.1 note.)
 
-- [ ] **Step 1: Install/confirm the editor**
+- [x] **Step 1: Install/confirm the editor**
 
 Open Unity Hub → Installs. Unity 6000.3.20f1 is already installed locally (verified at `C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe`). GDD pins 6000.3.12f1, which is not installed; either install it via Hub ("Locate a version" → 6000.3.12f1) for strict version parity, or proceed with 6000.3.20f1 (same 6000.3 stream) and note the substitution in the README. This plan assumes 6000.3.20f1 for all CLI batch-mode commands below — substitute the path if you install 6000.3.12f1 instead.
 
@@ -79,11 +79,11 @@ Checked `Packages/manifest.json`: the "2D (URP)" template on this editor version
 
 (Leave every URP/2D/core entry the template already added untouched.)
 
-- [ ] **Step 4: Switch Active Input Handling to the new Input System**
+- [x] **Step 4: Switch Active Input Handling to the new Input System**
 
 Edit → Project Settings → Player → Other Settings → Active Input Handling → **"Input System Package (New)"**. Let Unity restart the editor when prompted.
 
-- [ ] **Step 5: Write `.gitignore` for Unity**
+- [x] **Step 5: Write `.gitignore` for Unity**
 
 ```gitignore
 /Library/
@@ -103,12 +103,12 @@ Edit → Project Settings → Player → Other Settings → Active Input Handlin
 *.sln
 ```
 
-- [ ] **Step 6: Verify the editor launches in batch mode (smoke check for later automated test runs)**
+- [x] **Step 6: Verify the editor launches in batch mode (smoke check for later automated test runs)**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
 Expected: exits with code 0, log shows package resolution completing with no compile errors (there are no scripts yet, so this only validates the project itself opens headlessly).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add .gitignore Packages/manifest.json ProjectSettings
@@ -129,7 +129,7 @@ git commit -m "chore: bootstrap Unity 6 URP 2D project with Input System and Tes
 **Interfaces:**
 - Produces: the directory layout every later task's "Create:" paths assume.
 
-- [ ] **Step 1: Create the script/test folder skeleton**
+- [x] **Step 1: Create the script/test folder skeleton**
 
 In the OS shell (not the editor, so `.meta` files are generated consistently on next editor focus):
 
@@ -144,7 +144,7 @@ mkdir -p Assets/Scenes
 mkdir -p Assets/Input
 ```
 
-- [ ] **Step 2: Copy source art/audio into Unity's Assets folder**
+- [x] **Step 2: Copy source art/audio into Unity's Assets folder**
 
 ```bash
 cp Assets/Source/sprites/*.png Assets/Art/Sprites/
@@ -152,16 +152,16 @@ cp "Assets/Source/fonts/New Athletic M54.ttf" Assets/Art/Fonts/
 cp Assets/Source/sounds/*.wav Assets/Audio/
 ```
 
-- [ ] **Step 3: Open the editor once to let it import and generate `.meta` files**
+- [x] **Step 3: Open the editor once to let it import and generate `.meta` files**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
 Expected: exit code 0; `Assets/Art/Sprites/*.png.meta` and `Assets/Audio/*.wav.meta` now exist.
 
-- [ ] **Step 4: Set sprite import settings**
+- [x] **Step 4: Set sprite import settings**
 
 For every file under `Assets/Art/Sprites/`: select in Project window → Inspector → Texture Type: Sprite (2D and UI), Pixels Per Unit: 100, Filter Mode: Bilinear (per GDD "Crisp Unlit Vector aesthetic"), Compression: None. Apply.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets
