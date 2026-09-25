@@ -264,19 +264,21 @@ git commit -m "feat: add GameConfig ScriptableObject with GDD-specified tunables
 - Consumes: `GameConfig` (Task 1.1).
 - Produces: `readonly struct DifficultySnapshot { float ScrollSpeed; float ObstacleSpawnInterval; float RocketSpawnInterval; float RocketAggression; float RampProgress01; }` and `static class DifficultyEvaluator { static DifficultySnapshot Evaluate(float distanceMeters, GameConfig config); }`. Consumed by `SpawnManager` (Task 5.1).
 
-- [ ] **Step 1: Create the EditMode test assembly definition**
+- [x] **Step 1: Create the EditMode test assembly definition** — done 2026-09-25, via direct file write instead of the editor wizard (see note below).
 
 In `Assets/Tests/EditMode/`, create `JetpackRide.EditModeTests.asmdef` via editor: right-click → Create → Testing → Tests Assembly Folder is not used; instead right-click → Create → Assembly Definition, name it `JetpackRide.EditModeTests`, then in Inspector: check "Test Assemblies", add Assembly Definition References to the (not-yet-created) runtime assembly — do this after Task 1.2 Step 2 creates it, or set `"references": ["JetpackRide.Runtime"]` by hand once that assembly exists (see Step 2a).
 
-- [ ] **Step 2: Create a runtime assembly definition for `Assets/Scripts/`**
+- [x] **Step 2: Create a runtime assembly definition for `Assets/Scripts/`** — done 2026-09-25, via direct file write.
 
 In `Assets/Scripts/`, right-click → Create → Assembly Definition, name it `JetpackRide.Runtime`. This makes `Assets/Scripts/Core/*.cs` compile into a named assembly the EditMode test assembly can reference without pulling in Editor-only or Test-only code.
 
-- [ ] **Step 2a: Wire the test assembly's reference**
+- [x] **Step 2a: Wire the test assembly's reference** — done 2026-09-25, folded into the direct file write above.
 
 Select `Assets/Tests/EditMode/JetpackRide.EditModeTests.asmdef` in the Inspector → Assembly Definition References → add `JetpackRide.Runtime`. Apply.
 
-- [ ] **Step 3: Write the failing test**
+> **Note (2026-09-25):** An `.asmdef` is plain JSON, so Steps 1/2/2a were done by writing `Assets/Scripts/JetpackRide.Runtime.asmdef` and `Assets/Tests/EditMode/JetpackRide.EditModeTests.asmdef` directly (name-based `"references": ["JetpackRide.Runtime"]`, `"defineConstraints": ["UNITY_INCLUDE_TESTS"]`, `"precompiledReferences": ["nunit.framework.dll"]`) instead of clicking through the Create → Assembly Definition wizard. Verified working: Step 4's compile-error run confirmed the test assembly correctly resolved `UnityEngine.TestRunner`/`nunit.framework.dll`/`JetpackRide.Runtime` (only the expected `DifficultyEvaluator` CS0103 errors showed, no assembly-resolution errors), and Step 6 passed 5/5.
+
+- [x] **Step 3: Write the failing test**
 
 ```csharp
 using NUnit.Framework;
@@ -345,12 +347,12 @@ public class DifficultyEvaluatorTests
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it fails (compile error: `DifficultyEvaluator` doesn't exist)**
+- [x] **Step 4: Run the test to verify it fails (compile error: `DifficultyEvaluator` doesn't exist)**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
 Expected: run fails with a compile error referencing `DifficultyEvaluator` not found.
 
-- [ ] **Step 5: Write `DifficultyEvaluator.cs`**
+- [x] **Step 5: Write `DifficultyEvaluator.cs`**
 
 ```csharp
 using UnityEngine;
@@ -401,12 +403,12 @@ namespace JetpackRide.Core
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
 Expected: exit code 0, `TestResults/EditMode.xml` shows 5 passed, 0 failed.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Assets/Scripts Assets/Tests
