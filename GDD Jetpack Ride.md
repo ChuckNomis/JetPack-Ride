@@ -129,11 +129,11 @@ All of this is driven by distance-keyed curves (e.g. Animation Curves) rather th
 
 | Logo | Splash Art | Menu Background |
 |---|---|---|
-| ![Logo](assets/sprites/Logo.png) | ![Splash Art](assets/sprites/SplashArt.png) | ![Menu](assets/sprites/Menu.png) |
+| ![Logo](Assets/Source/sprites/Logo.png) | ![Splash Art](Assets/Source/sprites/SplashArt.png) | ![Menu](Assets/Source/sprites/Menu.png) |
 
 | Player Fly | Player Dead | Rocket | Zapper |
 |---|---|---|---|
-| ![Player Fly](assets/sprites/PlayerFly.png) | ![Player Dead](assets/sprites/PlayerDead.png) | ![Rocket](assets/sprites/Rocket.png) | ![Zapper](assets/sprites/Zapper1.png) |
+| ![Player Fly](Assets/Source/sprites/PlayerFly.png) | ![Player Dead](Assets/Source/sprites/PlayerDead.png) | ![Rocket](Assets/Source/sprites/Rocket.png) | ![Zapper](Assets/Source/sprites/Zapper1.png) |
 
 **Technical art rules:**
 - Pixel / Crisp Unlit Vector aesthetic (Filter Mode: Point / Bilinear depending on art style).
