@@ -431,7 +431,7 @@ git commit -m "feat: add DifficultyEvaluator with distance-clamped difficulty ra
 - Consumes: `GameConfig` (Task 1.1).
 - Produces: `enum GameState { GetReady, Running, GameOver }`; `class GameManager : MonoBehaviour` with `GameState CurrentState`, `float DistanceMeters`, `int CoinsThisRun`, `int Score`, `int HighScore`, `GameConfig Config`, methods `BeginRun()`, `AddDistance(float deltaMeters)`, `CollectCoin()`, `EndRun()`, `ReturnToGetReady()`, and events `event Action<GameState> StateChanged`, `event Action<float> DistanceChanged`, `event Action<int> CoinsChanged`, `event Action<int> ScoreChanged`. Consumed by `UIManager` (Task 6.1), `SpawnManager` (Task 5.1), `PlayerController` (Task 3.1), `RestartController` (Task 3.2).
 
-- [x] **Step 1: Create the PlayMode test assembly definition**
+- [x] **Step 1: Create the PlayMode test assembly definition** — done 2026-09-26, via direct file write (mirrors the EditMode asmdef without the Editor-only platform restriction), same approach as Task 1.2.
 
 In `Assets/Tests/PlayMode/`, create Assembly Definition `JetpackRide.PlayModeTests`, check "Test Assemblies", add Assembly Definition Reference to `JetpackRide.Runtime`.
 
