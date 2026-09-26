@@ -431,11 +431,11 @@ git commit -m "feat: add DifficultyEvaluator with distance-clamped difficulty ra
 - Consumes: `GameConfig` (Task 1.1).
 - Produces: `enum GameState { GetReady, Running, GameOver }`; `class GameManager : MonoBehaviour` with `GameState CurrentState`, `float DistanceMeters`, `int CoinsThisRun`, `int Score`, `int HighScore`, `GameConfig Config`, methods `BeginRun()`, `AddDistance(float deltaMeters)`, `CollectCoin()`, `EndRun()`, `ReturnToGetReady()`, and events `event Action<GameState> StateChanged`, `event Action<float> DistanceChanged`, `event Action<int> CoinsChanged`, `event Action<int> ScoreChanged`. Consumed by `UIManager` (Task 6.1), `SpawnManager` (Task 5.1), `PlayerController` (Task 3.1), `RestartController` (Task 3.2).
 
-- [ ] **Step 1: Create the PlayMode test assembly definition**
+- [x] **Step 1: Create the PlayMode test assembly definition**
 
 In `Assets/Tests/PlayMode/`, create Assembly Definition `JetpackRide.PlayModeTests`, check "Test Assemblies", add Assembly Definition Reference to `JetpackRide.Runtime`.
 
-- [ ] **Step 2: Write `GameState.cs`**
+- [x] **Step 2: Write `GameState.cs`**
 
 ```csharp
 namespace JetpackRide.Core
@@ -449,7 +449,7 @@ namespace JetpackRide.Core
 }
 ```
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 ```csharp
 using System.Collections;
@@ -547,12 +547,12 @@ public class GameManagerTests
 }
 ```
 
-- [ ] **Step 4: Run to verify it fails**
+- [x] **Step 4: Run to verify it fails**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
 Expected: compile error, `GameManager` not found.
 
-- [ ] **Step 5: Write `GameManager.cs`**
+- [x] **Step 5: Write `GameManager.cs`**
 
 ```csharp
 using System;
@@ -635,12 +635,12 @@ namespace JetpackRide.Core
 }
 ```
 
-- [ ] **Step 6: Run to verify it passes**
+- [x] **Step 6: Run to verify it passes**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
 Expected: exit code 0, 5 passed, 0 failed.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add Assets/Scripts/Core/GameState.cs Assets/Scripts/Core/GameManager.cs Assets/Tests/PlayMode
