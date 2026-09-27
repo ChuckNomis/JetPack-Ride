@@ -659,27 +659,27 @@ git commit -m "feat: add GameManager state machine with observer events"
 **Interfaces:**
 - Produces: an Input Actions asset with action map `Gameplay` containing button action `Thrust` (bound to Space, Left Mouse Button, Gamepad South/Right Trigger) and button action `Restart` (bound to Space, Left Mouse Button, Gamepad South), C# class generated (`Generate C# Class` checked, namespace `JetpackRide.Input`, class name `PlayerInputActions`). Consumed by `PlayerController` (Task 3.2) and `RestartController` (Task 3.3) via generated `PlayerInputActions.GameplayActions.Thrust` / `.Restart`.
 
-- [ ] **Step 1: Create the asset in-editor**
+- [x] **Step 1: Create the asset in-editor** — done 2026-09-27 via direct file write instead (Steps 1–5): `.inputactions` JSON + `.meta` with `generateWrapperCode: 1`, then a `-batchmode -quit` import pass generated the wrapper. Deviation: `wrapperCodePath` is `Assets/Scripts/Input/PlayerInputActions.cs` (not next to the asset) so the class compiles into `JetpackRide.Runtime`; `JetpackRide.Runtime.asmdef` now references `Unity.InputSystem`.
 
 `Assets/Input/` → right-click → Create → Input Actions → name `PlayerInputActions`. Double-click to open the Input Actions editor.
 
-- [ ] **Step 2: Add the `Gameplay` action map**
+- [x] **Step 2: Add the `Gameplay` action map**
 
 Add Action Map named `Gameplay`.
 
-- [ ] **Step 3: Add the `Thrust` action**
+- [x] **Step 3: Add the `Thrust` action**
 
 Add Action named `Thrust`, Action Type: Button. Add bindings: Keyboard `Space`, Mouse `Left Button`, Gamepad `Button South`, Gamepad `Right Trigger`.
 
-- [ ] **Step 4: Add the `Restart` action**
+- [x] **Step 4: Add the `Restart` action**
 
 Add Action named `Restart`, Action Type: Button. Add bindings: Keyboard `Space`, Mouse `Left Button`, Gamepad `Button South`.
 
-- [ ] **Step 5: Enable C# class generation**
+- [x] **Step 5: Enable C# class generation**
 
 In the Inspector for the `.inputactions` asset: check "Generate C# Class", C# Class Namespace: `JetpackRide.Input`, C# Class Name: `PlayerInputActions`. Click Apply. This generates `Assets/Input/PlayerInputActions.cs`.
 
-- [ ] **Step 6: Save and commit**
+- [x] **Step 6: Save and commit**
 
 ```bash
 git add Assets/Input
@@ -696,7 +696,7 @@ git commit -m "feat: add new Input System actions asset (Thrust, Restart)"
 - Consumes: `GameConfig`, `GameManager`, `GameState` (Phase 1–2), `JetpackRide.Input.PlayerInputActions` (Task 3.1).
 - Produces: `class PlayerController : MonoBehaviour` (requires `Rigidbody2D`) with `event Action Died`, public `float MinY`, `float MaxY` (play-bound clamp), method `ApplyThrust(bool held)` (internal test seam — see step 5) and standard Unity lifecycle. Consumed by scene wiring (Task 7.1) and `Hazards`/`Pickups` trigger handlers (Task 4.3, 4.4).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test** — done 2026-09-27 with deviations (see `Assets/Tests/PlayMode/PlayerControllerTests.cs` for the final version): thrust tests hold input for 10 fixed steps under real config gravity (the snippet's single-frame / zero-velocity asserts can't hold once gravity applies); clamp test sets `body.position` (a `transform` write isn't seen by `FixedUpdate` until the next sync); added `Position_ClampsToFloor_WhileGetReady` (one-physics-step tolerance).
 
 ```csharp
 using System.Collections;
@@ -779,12 +779,12 @@ public class PlayerControllerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
 Expected: compile error, `PlayerController` not found.
 
-- [ ] **Step 3: Write `PlayerController.cs`**
+- [x] **Step 3: Write `PlayerController.cs`** — done 2026-09-27 with deviations: `body.gravityScale = config.GravityScale` moved from `Awake` to `Start` (`Awake` runs inside `AddComponent`, before serialized/test-injected refs are read → NRE); play-bound clamp runs in every state so the player rests on the floor in `GetReady`/`GameOver`; actions disposed in `OnDestroy`. **Tuning change:** `jetpackThrust` default raised 28 → 60 in `GameConfig.cs` and `GameConfig.asset` — GDD's 28 u/s² is below gravity (3.8 × 9.81 ≈ 37.3 u/s²), so the player could never rise.
 
 ```csharp
 using UnityEngine;
@@ -870,12 +870,12 @@ namespace JetpackRide.Player
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 passed, 0 failed (plus prior GameManager tests still passing).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Player/PlayerController.cs Assets/Tests/PlayMode/PlayerControllerTests.cs
@@ -892,7 +892,7 @@ git commit -m "feat: add PlayerController with buffered new-Input-System jetpack
 - Consumes: `GameManager`, `GameState` (Phase 2), `JetpackRide.Input.PlayerInputActions` (Task 3.1).
 - Produces: `class RestartController : MonoBehaviour` with public `bool LockoutActive { get; }`, internal method `HandleRestartPressed()` (test seam). Fires `GameManager.BeginRun()` from `GetReady`, `GameManager.ReturnToGetReady()` from `GameOver`, both gated by the async lockout. Consumed by scene wiring (Task 7.1).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using System.Collections;
@@ -971,12 +971,12 @@ public class RestartControllerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
 Expected: compile error, `RestartController` not found.
 
-- [ ] **Step 3: Write `RestartController.cs`**
+- [x] **Step 3: Write `RestartController.cs`** — done 2026-09-27 with deviations: `gameManager.StateChanged` subscription and initial lockout moved from `OnEnable` to `Start` (same injection-order NRE as Task 3.2), unsubscribe/cancel/dispose in `OnDestroy`; `Restart.performed` hooked in `Awake`.
 
 ```csharp
 using System.Threading;
@@ -1080,12 +1080,12 @@ namespace JetpackRide.Core
 
 Save this as `Assets/Scripts/Core/AwaitableExtensions.cs`.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
-Expected: exit code 0, 3 new tests passed.
+Expected: exit code 0, 3 new tests passed. (Actual 2026-09-27: PlayMode 12/12, EditMode 5/5.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Player/RestartController.cs Assets/Scripts/Core/AwaitableExtensions.cs Assets/Tests/PlayMode/RestartControllerTests.cs
