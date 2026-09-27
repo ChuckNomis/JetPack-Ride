@@ -11,7 +11,7 @@ namespace JetpackRide.Core
         [SerializeField] private float maxScrollSpeed = 26f;
 
         [Header("Jetpack Physics")]
-        [SerializeField] private float jetpackThrust = 28f;
+        [SerializeField] private float jetpackThrust = 60f;
         [SerializeField] private float gravityScale = 3.8f;
 
         [Header("Obstacle Spawning")]
