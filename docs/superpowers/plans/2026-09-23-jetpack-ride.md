@@ -1106,7 +1106,7 @@ git commit -m "feat: add RestartController with async 1s death lockout"
 **Interfaces:**
 - Produces: `interface IPoolable { void OnSpawned(); void OnDespawned(); }`; `class ObjectPoolManager : MonoBehaviour` with `GameObject Spawn(string id, Vector3 position, Quaternion rotation)`, `void Despawn(string id, GameObject instance)`, `void DespawnAll()`. Consumed by `SpawnManager` (Task 5.1), `Hazards`/`Pickups` self-despawn (Task 4.3–4.5), `GameManager`-driven reset (Task 7.2).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test** — done 2026-09-27 with deviations (final version: `Assets/Tests/PlayMode/ObjectPoolManagerTests.cs`): `ProbePoolable` moved to its own `ProbePoolable.cs` (file name must match the class for Unity to treat it as a normal script); added `Despawn_Twice_DoesNotHandOutSameInstanceTwice` and `Spawn_NotifiesEveryPoolableComponent`.
 
 ```csharp
 using System.Collections;
@@ -1214,12 +1214,12 @@ public class ObjectPoolManagerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `ObjectPoolManager` / `IPoolable` not found.
 
-- [ ] **Step 3: Write `IPoolable.cs`**
+- [x] **Step 3: Write `IPoolable.cs`**
 
 ```csharp
 namespace JetpackRide.Pooling
@@ -1232,7 +1232,7 @@ namespace JetpackRide.Pooling
 }
 ```
 
-- [ ] **Step 4: Write `ObjectPoolManager.cs`**
+- [x] **Step 4: Write `ObjectPoolManager.cs`** — done 2026-09-27 with deviations: pools are built lazily per id on first `Spawn` (the snippet's `Awake` runs inside `AddComponent`, before entries are assigned → `KeyNotFoundException`); `Despawn` is idempotent (active set is a `HashSet`, release only if removed — with `collectionCheck: false` a double release would hand one instance out twice); `IPoolable` callbacks go to **every** `IPoolable` on the object (`TryGetComponent` only reached the first, so a rocket/coin's `HazardMover` or behaviour reset was skipped).
 
 ```csharp
 using System;
@@ -1313,12 +1313,12 @@ namespace JetpackRide.Pooling
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 4 new tests passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Assets/Scripts/Pooling Assets/Tests/PlayMode/ObjectPoolManagerTests.cs
@@ -1334,7 +1334,7 @@ git commit -m "feat: add ObjectPoolManager (IPoolable + UnityEngine.Pool.ObjectP
 **Interfaces:**
 - Produces: `class HazardMover : MonoBehaviour, IPoolable` with `float SpeedOverride` (set by spawner at spawn time), `float DespawnX` (world x below which it self-despawns), fields wired to an `ObjectPoolManager` + pool id for self-despawn. Consumed by `ObstacleBehaviour` (Task 4.3), `RocketBehaviour` (Task 4.4), `CoinBehaviour` (Task 4.5).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test** — done 2026-09-27; added `PassingDespawnX_ReturnsInstanceToPool`.
 
 ```csharp
 using System.Collections;
@@ -1385,12 +1385,12 @@ public class HazardMoverTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `HazardMover` not found.
 
-- [ ] **Step 3: Write `HazardMover.cs`**
+- [x] **Step 3: Write `HazardMover.cs`** — done 2026-09-27 with deviation: adds public idempotent `Despawn()` (falls back to `SetActive(false)` when unpooled), reused by `CoinBehaviour.Collect`; `OnDespawned` sets `HasDespawned`.
 
 ```csharp
 using UnityEngine;
@@ -1438,12 +1438,12 @@ namespace JetpackRide.Hazards
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Hazards/HazardMover.cs Assets/Tests/PlayMode/HazardMoverTests.cs
@@ -1463,7 +1463,7 @@ git commit -m "feat: add HazardMover shared pooled leftward-scroll behaviour"
 - Consumes: `HazardMover` (Task 4.2), `IPoolable` (Task 4.1).
 - Produces: `class ObstacleBehaviour : MonoBehaviour` (tag `Hazard`, static zapper — no extra logic beyond collider + sprite); `class RocketBehaviour : MonoBehaviour, IPoolable` with `void Init(bool homing)`, homing rockets steer toward the player's current Y at a fixed turn rate, straight-line rockets don't. Consumed by `SpawnManager` (Task 5.1).
 
-- [ ] **Step 1: Write the failing test for rocket homing behaviour**
+- [x] **Step 1: Write the failing test for rocket homing behaviour** — done 2026-09-27; added `Homing_DoesNotOvershootTargetY`.
 
 ```csharp
 using System.Collections;
@@ -1520,12 +1520,12 @@ public class RocketBehaviourTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RocketBehaviour` not found.
 
-- [ ] **Step 3: Write `ObstacleBehaviour.cs`**
+- [x] **Step 3: Write `ObstacleBehaviour.cs`**
 
 ```csharp
 using UnityEngine;
@@ -1541,7 +1541,7 @@ namespace JetpackRide.Hazards
 }
 ```
 
-- [ ] **Step 4: Write `RocketBehaviour.cs`**
+- [x] **Step 4: Write `RocketBehaviour.cs`** — done 2026-09-27 with deviation: homing moves the rocket's Y toward the target's Y at `homingVerticalSpeed` (3 u/s, `Mathf.MoveTowards`) instead of rotating to face the target — the snippet spun the sprite ~180° toward a player on its left while only drifting 0.5 u/s along its heading.
 
 ```csharp
 using UnityEngine;
@@ -1594,20 +1594,20 @@ namespace JetpackRide.Hazards
 }
 ```
 
-- [ ] **Step 5: Assemble `Obstacle_Zapper.prefab`**
+- [x] **Step 5: Assemble `Obstacle_Zapper.prefab`** — done 2026-09-27 (Steps 5–6 and Task 4.4 Step 4) by `Assets/Editor/PrefabBuilder.cs` instead of hand-assembly: menu *Jetpack Ride → Build Prefabs*, or `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildAll -logFile -`. It also creates the `Hazard`/`Coin` tags and the five GDD sorting layers (originally Task 7.3).
 
 In `Assets/Prefabs/`, create empty GameObject `Obstacle_Zapper`: add `SpriteRenderer` (sprite `Zapper1`, sorting layer `Hazards`), `BoxCollider2D` (Is Trigger: true, sized to sprite), tag `Hazard`, add components `HazardMover` and `ObstacleBehaviour`. Drag into `Assets/Prefabs/` to make it a prefab, delete the scene instance.
 
-- [ ] **Step 6: Assemble `Rocket.prefab`**
+- [x] **Step 6: Assemble `Rocket.prefab`**
 
 In `Assets/Prefabs/`, create empty GameObject `Rocket`: add `SpriteRenderer` (sprite `Rocket`, sorting layer `Hazards`), `BoxCollider2D` (Is Trigger: true), tag `Hazard`, add components `HazardMover` and `RocketBehaviour`. Drag into `Assets/Prefabs/`, delete the scene instance.
 
-- [ ] **Step 7: Run to verify tests pass**
+- [x] **Step 7: Run to verify tests pass**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add Assets/Scripts/Hazards Assets/Tests/PlayMode/RocketBehaviourTests.cs Assets/Prefabs/Obstacle_Zapper.prefab* Assets/Prefabs/Rocket.prefab*
@@ -1625,7 +1625,7 @@ git commit -m "feat: add ObstacleBehaviour, homing/straight RocketBehaviour, and
 - Consumes: `HazardMover` (Task 4.2, reused for scroll+despawn), `GameManager.CollectCoin()` (Task 2.1).
 - Produces: `class CoinBehaviour : MonoBehaviour` (tag `Coin`) with `bool Collected { get; }`, `void Collect()` (idempotent — a coin can only be collected once even if triggers overlap twice in one frame). Consumed by `PlayerController` trigger handling (extend Task 3.2 in Step 3 below).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test** — done 2026-09-27; added `OnSpawned_AfterCollect_CanBeCollectedAgain`, plus `PlayerControllerTests` trigger tests `CoinOverlap_WhileRunning_CreditsOnceAndConsumesCoin` and `CoinOverlap_AfterDeath_IsNotCredited` (Review Focus item).
 
 ```csharp
 using NUnit.Framework;
@@ -1664,12 +1664,12 @@ public class CoinBehaviourTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `CoinBehaviour` not found.
 
-- [ ] **Step 3: Write `CoinBehaviour.cs` and extend `PlayerController`'s trigger handler**
+- [x] **Step 3: Write `CoinBehaviour.cs` and extend `PlayerController`'s trigger handler** — done 2026-09-27 with deviations: `CoinBehaviour` implements `IPoolable` and resets `Collected` in `OnSpawned` (otherwise a reused coin can never be collected again); `Collect` returns the coin to its pool via `HazardMover.Despawn()` instead of only `SetActive(false)` (which left collected coins checked out of the pool all run).
 
 ```csharp
 using System;
@@ -1720,16 +1720,16 @@ private void OnTriggerEnter2D(Collider2D other)
 
 This ordering — checking `gameManager.CurrentState != GameState.Running` first, and `coin.Collected` before crediting — is what satisfies the Review Focus item about a coin and a death overlapping on the same frame: once `EndRun()` flips the state, any coin trigger processed afterward in the same frame is a no-op because the state guard runs first.
 
-- [ ] **Step 4: Assemble `Coin.prefab`**
+- [x] **Step 4: Assemble `Coin.prefab`**
 
 In `Assets/Prefabs/`, create empty GameObject `Coin`: add `SpriteRenderer` (sprite `Coin`, sorting layer `Decals`), `CircleCollider2D` (Is Trigger: true), tag `Coin`, add components `HazardMover` and `CoinBehaviour`. Drag into `Assets/Prefabs/`, delete the scene instance.
 
-- [ ] **Step 5: Run to verify tests pass**
+- [x] **Step 5: Run to verify tests pass**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
-Expected: exit code 0, 2 new tests passed.
+Expected: exit code 0, 2 new tests passed. (Actual 2026-09-27 at end of Phase 4: PlayMode 29/29, EditMode 5/5.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Assets/Scripts/Pickups Assets/Scripts/Player/PlayerController.cs Assets/Tests/PlayMode/CoinBehaviourTests.cs Assets/Prefabs/Coin.prefab*
@@ -2454,7 +2454,7 @@ Select `UIManager` GameObject and assign all panel/text references from these hi
 
 - [ ] **Step 9: Set sorting layers**
 
-Edit → Project Settings → Tags and Layers → Sorting Layers: create, in order, `Background`, `Decals`, `Hazards`, `Player`, `ForegroundUI`. Assign each `SpriteRenderer` created above to its matching layer; assign Canvas's Sort Layer to `ForegroundUI`.
+(Already done 2026-09-27 by `PrefabBuilder` in Task 4.3 — verify only.) Edit → Project Settings → Tags and Layers → Sorting Layers: create, in order, `Background`, `Decals`, `Hazards`, `Player`, `ForegroundUI`. Assign each `SpriteRenderer` created above to its matching layer; assign Canvas's Sort Layer to `ForegroundUI`.
 
 - [ ] **Step 10: Smoke test in batch mode**
 
