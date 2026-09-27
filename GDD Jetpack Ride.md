@@ -72,7 +72,7 @@ All of this is driven by distance-keyed curves (e.g. Animation Curves) rather th
 | `baseScrollSpeed` | World scroll velocity at run start | 12.0 u/s |
 | `scrollSpeedPerMeter` | Scroll speed gained per meter traveled | +0.005 u/s per m |
 | `maxScrollSpeed` | Cap on world scroll velocity | 26.0 u/s |
-| `jetpackThrust` | Upward acceleration applied when holding primary input | 28.0 u/s² |
+| `jetpackThrust` | Upward acceleration applied when holding primary input | 60.0 u/s² |
 | `gravityScale` | Fall rate for the jetpack state | 3.8 |
 | `baseObstacleSpawnInterval` | Time between obstacle spawns at run start | 1.8 s |
 | `minObstacleSpawnInterval` | Floor for obstacle spawn interval at max difficulty | 0.6 s |
