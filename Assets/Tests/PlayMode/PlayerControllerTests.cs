@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using JetpackRide.Core;
+using JetpackRide.Pickups;
 using JetpackRide.Player;
 
 public class PlayerControllerTests
@@ -97,6 +98,53 @@ public class PlayerControllerTests
         // The clamp runs before each physics step, so gravity can pull the body at most one
         // step (~g*dt^2, well under 0.05u) below the floor — it must not keep sinking.
         Assert.GreaterOrEqual(body.position.y, controller.MinY - 0.05f);
+        Object.DestroyImmediate(go);
+        Object.DestroyImmediate(manager.gameObject);
+    }
+
+    private GameObject NewCoinAt(Vector2 position)
+    {
+        var coinGo = new GameObject("Coin") { tag = "Coin" };
+        coinGo.transform.position = position;
+        coinGo.AddComponent<CircleCollider2D>().isTrigger = true;
+        coinGo.AddComponent<CoinBehaviour>();
+        return coinGo;
+    }
+
+    [UnityTest]
+    public IEnumerator CoinOverlap_WhileRunning_CreditsOnceAndConsumesCoin()
+    {
+        var (go, controller, body, manager) = Build();
+        go.AddComponent<BoxCollider2D>();
+        body.gravityScale = 0f;
+        yield return null;
+        manager.BeginRun();
+
+        var coinGo = NewCoinAt(body.position);
+        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+
+        Assert.AreEqual(1, manager.CoinsThisRun);
+        Assert.IsFalse(coinGo.activeSelf);
+        Object.DestroyImmediate(coinGo);
+        Object.DestroyImmediate(go);
+        Object.DestroyImmediate(manager.gameObject);
+    }
+
+    [UnityTest]
+    public IEnumerator CoinOverlap_AfterDeath_IsNotCredited()
+    {
+        var (go, controller, body, manager) = Build();
+        go.AddComponent<BoxCollider2D>();
+        yield return null;
+        manager.BeginRun();
+        manager.EndRun(); // player died; state is GameOver
+
+        var coinGo = NewCoinAt(body.position);
+        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+
+        Assert.AreEqual(0, manager.CoinsThisRun);
+        Assert.IsTrue(coinGo.activeSelf);
+        Object.DestroyImmediate(coinGo);
         Object.DestroyImmediate(go);
         Object.DestroyImmediate(manager.gameObject);
     }

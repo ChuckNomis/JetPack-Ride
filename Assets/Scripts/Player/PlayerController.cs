@@ -1,6 +1,7 @@
 using UnityEngine;
 using JetpackRide.Core;
 using JetpackRide.Input;
+using JetpackRide.Pickups;
 
 namespace JetpackRide.Player
 {
@@ -88,7 +89,19 @@ namespace JetpackRide.Player
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            // State guard first: once EndRun() has left Running, a coin overlapping on the same
+            // frame as the death is not credited.
             if (gameManager.CurrentState != GameState.Running) return;
+
+            if (other.TryGetComponent<CoinBehaviour>(out var coin))
+            {
+                if (!coin.Collected)
+                {
+                    coin.Collect();
+                    gameManager.CollectCoin();
+                }
+                return;
+            }
 
             if (other.CompareTag("Hazard"))
             {

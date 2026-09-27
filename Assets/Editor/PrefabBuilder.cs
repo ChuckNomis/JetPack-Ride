@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using JetpackRide.Hazards;
+using JetpackRide.Pickups;
 
 namespace JetpackRide.EditorTools
 {
@@ -30,6 +31,10 @@ namespace JetpackRide.EditorTools
             BuildPrefab("Rocket", "Rocket", "Hazards", "Hazard",
                 go => go.AddComponent<BoxCollider2D>(),
                 typeof(HazardMover), typeof(RocketBehaviour));
+
+            BuildPrefab("Coin", "Coin", "Decals", "Coin",
+                go => go.AddComponent<CircleCollider2D>(),
+                typeof(HazardMover), typeof(CoinBehaviour));
 
             AssetDatabase.SaveAssets();
             Debug.Log("[PrefabBuilder] Prefabs rebuilt.");
