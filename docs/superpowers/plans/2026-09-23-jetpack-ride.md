@@ -10,7 +10,7 @@
 
 **Spec:** `GDD Jetpack Ride.md` (repo root)
 
-> **Environment note (added post-authoring):** Plan originally written by teammate Nadav Simon, whose machine had the repo at `C:\Users\nadav\Documents\GitHub\JetPack-Ride`. All `-projectPath` / `Unity.exe` paths below have been rewritten to this machine's actual repo location, `C:\Users\jjlim\JetPack-Ride`. Any future contributor running these commands on a different machine must substitute their own repo path.
+> **Environment note (added post-authoring):** Plan originally written by teammate Nadav Simon; paths differ per machine. The Unity commands below use `$UNITY_EXE` and `$PROJECT_PATH` — copy `.env.example` to `.env` (gitignored), set both for your machine, and load them in Git Bash with `set -a; . ./.env; set +a` before running any command. (Task 0.1's bootstrap log still names the machine it was first done on, `C:\Users\jjlim\JetPack-Ride`.)
 
 ## Global Constraints
 
@@ -105,7 +105,7 @@ Edit → Project Settings → Player → Other Settings → Active Input Handlin
 
 - [x] **Step 6: Verify the editor launches in batch mode (smoke check for later automated test runs)**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -logFile -`
 Expected: exits with code 0, log shows package resolution completing with no compile errors (there are no scripts yet, so this only validates the project itself opens headlessly).
 
 - [x] **Step 7: Commit**
@@ -154,7 +154,7 @@ cp Assets/Source/sounds/*.wav Assets/Audio/
 
 - [x] **Step 3: Open the editor once to let it import and generate `.meta` files**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -logFile -`
 Expected: exit code 0; `Assets/Art/Sprites/*.png.meta` and `Assets/Audio/*.wav.meta` now exist.
 
 - [x] **Step 4: Set sprite import settings**
@@ -239,7 +239,7 @@ namespace JetpackRide.Core
 
 - [x] **Step 2: Open editor, confirm no compile errors**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -logFile -`
 Expected: exit code 0, no `CS` compiler errors in output.
 
 - [x] **Step 3: Create the asset instance in-editor**
@@ -349,7 +349,7 @@ public class DifficultyEvaluatorTests
 
 - [x] **Step 4: Run the test to verify it fails (compile error: `DifficultyEvaluator` doesn't exist)**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: run fails with a compile error referencing `DifficultyEvaluator` not found.
 
 - [x] **Step 5: Write `DifficultyEvaluator.cs`**
@@ -405,7 +405,7 @@ namespace JetpackRide.Core
 
 - [x] **Step 6: Run the tests to verify they pass**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: exit code 0, `TestResults/EditMode.xml` shows 5 passed, 0 failed.
 
 - [x] **Step 7: Commit**
@@ -549,7 +549,7 @@ public class GameManagerTests
 
 - [x] **Step 4: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `GameManager` not found.
 
 - [x] **Step 5: Write `GameManager.cs`**
@@ -637,7 +637,7 @@ namespace JetpackRide.Core
 
 - [x] **Step 6: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 5 passed, 0 failed.
 
 - [x] **Step 7: Commit**
@@ -781,7 +781,7 @@ public class PlayerControllerTests
 
 - [x] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `PlayerController` not found.
 
 - [x] **Step 3: Write `PlayerController.cs`** — done 2026-09-27 with deviations: `body.gravityScale = config.GravityScale` moved from `Awake` to `Start` (`Awake` runs inside `AddComponent`, before serialized/test-injected refs are read → NRE); play-bound clamp runs in every state so the player rests on the floor in `GetReady`/`GameOver`; actions disposed in `OnDestroy`. **Tuning change:** `jetpackThrust` default raised 28 → 60 in `GameConfig.cs` and `GameConfig.asset` — GDD's 28 u/s² is below gravity (3.8 × 9.81 ≈ 37.3 u/s²), so the player could never rise.
@@ -872,7 +872,7 @@ namespace JetpackRide.Player
 
 - [x] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 passed, 0 failed (plus prior GameManager tests still passing).
 
 - [x] **Step 5: Commit**
@@ -973,7 +973,7 @@ public class RestartControllerTests
 
 - [x] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RestartController` not found.
 
 - [x] **Step 3: Write `RestartController.cs`** — done 2026-09-27 with deviations: `gameManager.StateChanged` subscription and initial lockout moved from `OnEnable` to `Start` (same injection-order NRE as Task 3.2), unsubscribe/cancel/dispose in `OnDestroy`; `Restart.performed` hooked in `Awake`.
@@ -1082,7 +1082,7 @@ Save this as `Assets/Scripts/Core/AwaitableExtensions.cs`.
 
 - [x] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed. (Actual 2026-09-27: PlayMode 12/12, EditMode 5/5.)
 
 - [x] **Step 5: Commit**
@@ -1216,7 +1216,7 @@ public class ObjectPoolManagerTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `ObjectPoolManager` / `IPoolable` not found.
 
 - [ ] **Step 3: Write `IPoolable.cs`**
@@ -1315,7 +1315,7 @@ namespace JetpackRide.Pooling
 
 - [ ] **Step 5: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 4 new tests passed.
 
 - [ ] **Step 6: Commit**
@@ -1387,7 +1387,7 @@ public class HazardMoverTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `HazardMover` not found.
 
 - [ ] **Step 3: Write `HazardMover.cs`**
@@ -1440,7 +1440,7 @@ namespace JetpackRide.Hazards
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
 - [ ] **Step 5: Commit**
@@ -1522,7 +1522,7 @@ public class RocketBehaviourTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RocketBehaviour` not found.
 
 - [ ] **Step 3: Write `ObstacleBehaviour.cs`**
@@ -1604,7 +1604,7 @@ In `Assets/Prefabs/`, create empty GameObject `Rocket`: add `SpriteRenderer` (sp
 
 - [ ] **Step 7: Run to verify tests pass**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
 - [ ] **Step 8: Commit**
@@ -1666,7 +1666,7 @@ public class CoinBehaviourTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `CoinBehaviour` not found.
 
 - [ ] **Step 3: Write `CoinBehaviour.cs` and extend `PlayerController`'s trigger handler**
@@ -1726,7 +1726,7 @@ In `Assets/Prefabs/`, create empty GameObject `Coin`: add `SpriteRenderer` (spri
 
 - [ ] **Step 5: Run to verify tests pass**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
 - [ ] **Step 6: Commit**
@@ -1858,7 +1858,7 @@ public class SpawnManagerTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `SpawnManager` not found.
 
 - [ ] **Step 3: Write `SpawnManager.cs`**
@@ -1972,7 +1972,7 @@ namespace JetpackRide.Spawning
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed.
 
 - [ ] **Step 5: Commit**
@@ -2097,7 +2097,7 @@ public class UIManagerTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `UIManager` not found.
 
 - [ ] **Step 3: Write `UIManager.cs`**
@@ -2177,7 +2177,7 @@ namespace JetpackRide.UI
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed.
 
 - [ ] **Step 5: Commit**
@@ -2242,7 +2242,7 @@ public class ParallaxLayerTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: compile error, `ParallaxLayer` not found.
 
 - [ ] **Step 3: Write `ParallaxLayer.cs`**
@@ -2282,7 +2282,7 @@ namespace JetpackRide.Environment
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
 - [ ] **Step 5: Commit**
@@ -2358,7 +2358,7 @@ public class RunResetServiceTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RunResetService` not found.
 
 - [ ] **Step 3: Write `RunResetService.cs`**
@@ -2397,7 +2397,7 @@ namespace JetpackRide.Core
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 1 new test passed.
 
 - [ ] **Step 5: Commit**
@@ -2458,7 +2458,7 @@ Edit → Project Settings → Tags and Layers → Sorting Layers: create, in ord
 
 - [ ] **Step 10: Smoke test in batch mode**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -quit -projectPath "C:\Users\jjlim\JetPack-Ride" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -logFile -`
 Expected: exit code 0, no missing-reference or compile errors in the log.
 
 - [ ] **Step 11: Manual playtest**
@@ -2529,7 +2529,7 @@ public class RocketWarningIndicatorTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RocketWarningIndicator` not found.
 
 - [ ] **Step 3: Write `RocketWarningIndicator.cs`**
@@ -2600,7 +2600,7 @@ Create GameObject `RocketWarning`: `SpriteRenderer` (sprite `RocketWarning`, sor
 
 - [ ] **Step 6: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 1 new test passed, all prior PlayMode tests still passing.
 
 - [ ] **Step 7: Commit**
@@ -2686,7 +2686,7 @@ Assign `explosionPrefab` on the `Player` scene object.
 
 - [ ] **Step 5: Run existing PlayMode/EditMode suites to confirm no regressions**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, all prior tests still passing (particle instantiation is additive and null-guarded, so headless test doubles that never assign these fields are unaffected).
 
 - [ ] **Step 6: Manual playtest**
@@ -2740,7 +2740,7 @@ public class SpawnManagerPatternTests
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `DetermineObstacleClusterSize` not found.
 
 - [ ] **Step 3: Implement it as a `static` method on `SpawnManager` and use it in `SpawnObstacleNow`**
@@ -2777,7 +2777,7 @@ internal void SpawnObstacleNow()
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed, `SpawnManagerTests.SpawnObstacleNow_CreatesInstanceAtSpawnPointX` (Task 5.1) still passes since low-distance ramp progress still yields cluster size 1.
 
 - [ ] **Step 5: Commit**
@@ -2809,9 +2809,9 @@ Edit keyframes so aggression stays near 0 until `rampT ≈ 0.4`, then rises to 1
 
 - [ ] **Step 4: Re-run the full automated suite to confirm curve edits don't break clamping behavior**
 
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform EditMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\EditMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 and
-Run: `"C:\Program Files\Unity\Hub\Editor\6000.3.20f1\Editor\Unity.exe" -batchmode -runTests -projectPath "C:\Users\jjlim\JetPack-Ride" -testPlatform PlayMode -testResults "C:\Users\jjlim\JetPack-Ride\TestResults\PlayMode.xml" -logFile -`
+Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: both exit code 0, all tests still passing (`DifficultyEvaluatorTests` uses `config.DifficultyCurve.Evaluate` dynamically, so it adapts to whatever keyframes are set and still asserts the floor/ceiling clamps hold).
 
 - [ ] **Step 5: Manual playtest confirmation**
