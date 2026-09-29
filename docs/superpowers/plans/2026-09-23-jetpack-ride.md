@@ -2497,6 +2497,8 @@ Open the project in the Unity Editor, open `MainGame.unity`, press Play. Verify:
 
 **First pass (2026-09-29) found 3 issues, all addressed above:** (1) HUD/final-stat text never updated — root cause was the missing `AddDistance()` caller, fixed by `DistanceTracker`. (2) Parallax backgrounds showed gaps/the camera's default blue — root cause was the `Background_Far_1`/`Near_1` position bug, fixed. (3) Hazard speed felt off relative to the background — expected to resolve once distance-driven scroll speed is actually ticking; re-verify on the next playtest pass. **Re-playtest pending** — not yet re-confirmed clean after the fixes.
 
+> **Note (done 2026-09-29):** Second pass found Player and hazard sprites too small at default scale `(1,1,1)`. Bumped `Player` (in `MainGame.unity`), `Obstacle_Zapper.prefab`, and `Rocket.prefab` to `(2,2,2)` — colliders scale automatically with the transform, no separate collider edits needed. User adjusted further in-Editor on top of this. **MainGame scene still needs further sizing/layout adjustments** — not yet considered final; revisit before closing Task 7.3.
+
 - [ ] **Step 12: Commit**
 
 ```bash
