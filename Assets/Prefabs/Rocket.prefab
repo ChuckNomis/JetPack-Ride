@@ -164,5 +164,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9b2fcacb3d15f84aa5d5741dcc6fffb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Hazards.RocketBehaviour
-  target: {fileID: 0}
-  homingVerticalSpeed: 3

@@ -32,7 +32,17 @@ namespace JetpackRide.Core
         [Header("Difficulty Ramp")]
         [SerializeField] private float difficultyRampDistance = 2500f;
         [SerializeField] private AnimationCurve difficultyCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [Tooltip("Chance (by ramp progress) that a rocket volley has one rocket whose warning tracks the player.")]
         [SerializeField] private AnimationCurve rocketAggressionCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
+        [Header("Rocket Lock-On")]
+        [Tooltip("How long a tracking warning follows the player early in a run.")]
+        [SerializeField] private float rocketTrackSecondsEarly = 2f;
+        [Tooltip("How long it follows at full difficulty (shorter = faster pace).")]
+        [SerializeField] private float rocketTrackSecondsLate = 1f;
+        [SerializeField] private float rocketLockSeconds = 0.3f;
+        [Tooltip("Max vertical speed (units/s) of a tracking warning.")]
+        [SerializeField] private float rocketTrackSpeed = 4f;
 
         [Header("Scoring")]
         [SerializeField] private int coinValue = 5;
@@ -54,6 +64,9 @@ namespace JetpackRide.Core
         public float DifficultyRampDistance => difficultyRampDistance;
         public AnimationCurve DifficultyCurve => difficultyCurve;
         public AnimationCurve RocketAggressionCurve => rocketAggressionCurve;
+        public float RocketLockSeconds => rocketLockSeconds;
+        public float RocketTrackSpeed => rocketTrackSpeed;
+        public float RocketTrackSeconds(float rampProgress01) => Mathf.Lerp(rocketTrackSecondsEarly, rocketTrackSecondsLate, Mathf.Clamp01(rampProgress01));
         public int CoinValue => coinValue;
         public float RestartLockoutSeconds => restartLockoutSeconds;
     }

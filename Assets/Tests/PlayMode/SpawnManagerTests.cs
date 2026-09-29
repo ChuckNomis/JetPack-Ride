@@ -32,6 +32,10 @@ public class SpawnManagerTests
         coinPrefab.AddComponent<JetpackRide.Pickups.CoinBehaviour>();
         coinPrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         coinPrefab.SetActive(false);
+        var warningPrefab = new GameObject("WarningPrefab");
+        warningPrefab.AddComponent<SpriteRenderer>();
+        warningPrefab.AddComponent<JetpackRide.Hazards.RocketWarningIndicator>();
+        warningPrefab.SetActive(false);
 
         var poolGo = new GameObject("Pool");
         var pool = poolGo.AddComponent<ObjectPoolManager>();
@@ -51,6 +55,7 @@ public class SpawnManagerTests
         AddEntry("obstacle", obstaclePrefab);
         AddEntry("rocket", rocketPrefab);
         AddEntry("coin", coinPrefab);
+        AddEntry("rocketWarning", warningPrefab);
         typeof(ObjectPoolManager).GetField("poolEntries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
             .SetValue(pool, list);
 
@@ -80,21 +85,46 @@ public class SpawnManagerTests
     }
 
     [UnityTest]
-    public IEnumerator SpawnRocketNow_AtHighDistance_CanProduceHomingRocket()
+    public IEnumerator RocketLoop_TrackedVolley_LaunchesAtLockedPlayerY()
     {
         var (spawner, manager, pool) = Build();
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", flags).GetValue(spawner);
+        void Set(string field, object value) => typeof(GameConfig).GetField(field, flags).SetValue(config, value);
+        Set("baseRocketSpawnInterval", 0.6f);
+        Set("minRocketSpawnInterval", 0.6f);
+        Set("rocketTrackSecondsEarly", 0.2f);
+        Set("rocketTrackSecondsLate", 0.2f);
+        Set("rocketLockSeconds", 0.1f);
+        Set("rocketTrackSpeed", 1000f);
+        Set("rocketAggressionCurve", AnimationCurve.Constant(0f, 1f, 1f)); // every volley tracks
+
+        var player = new GameObject("Player").transform;
+        player.position = new Vector3(-6f, 2f, 0f);
+        typeof(SpawnManager).GetField("player", flags).SetValue(spawner, player);
+
+        int launched = 0;
+        spawner.RocketSpawned += () => launched++;
         yield return null;
         manager.BeginRun();
-        manager.AddDistance(100000f); // far past ramp distance -> rocketAggression == 1
+        manager.AddDistance(100000f);
 
-        bool sawHoming = false;
-        for (int i = 0; i < 20; i++)
+        for (float t = 0f; t < 3f && launched == 0; t += Time.deltaTime) yield return null;
+        yield return null;
+        manager.EndRun();
+
+        Assert.Greater(launched, 0, "a volley launched");
+        Assert.IsTrue(spawner.LastVolleyTracked);
+        var ys = new System.Collections.Generic.List<float>();
+        foreach (Transform child in pool.transform)
         {
-            spawner.SpawnRocketNow();
-            if (spawner.LastSpawnedRocketWasHoming) sawHoming = true;
+            if (child.gameObject.activeSelf && child.GetComponent<JetpackRide.Hazards.RocketBehaviour>() != null) ys.Add(child.position.y);
         }
-
-        Assert.IsTrue(sawHoming);
+        Assert.IsTrue(ys.Exists(y => Mathf.Abs(y - 2f) < 0.05f), "one rocket flies at the locked player height: " + string.Join(", ", ys));
+        for (int i = 0; i < ys.Count; i++)
+            for (int j = i + 1; j < ys.Count; j++)
+                Assert.GreaterOrEqual(Mathf.Abs(ys[i] - ys[j]), SpawnManager.MinRocketPairGap - 1e-3f, "volley keeps a flyable lane");
+        Object.DestroyImmediate(player.gameObject);
     }
 
     [UnityTest]

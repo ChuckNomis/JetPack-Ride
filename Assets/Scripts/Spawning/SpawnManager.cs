@@ -45,7 +45,7 @@ namespace JetpackRide.Spawning
         [SerializeField] private int zapperShiftAttempts = 6;
 
         public int ActiveObstacleCount { get; private set; }
-        public bool LastSpawnedRocketWasHoming { get; private set; }
+        public bool LastVolleyTracked { get; private set; }
         public event System.Action RocketSpawned;
 
         private CancellationTokenSource cts;
@@ -116,15 +116,49 @@ namespace JetpackRide.Spawning
                 await Awaitable.WaitForSecondsAsync(waitBeforeWarning, token);
                 if (token.IsCancellationRequested) break;
 
+                snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
                 int volley = DetermineRocketVolleySize(gameManager.DistanceMeters, Random.value, rocketPairsFromMeters, rocketTriplesFromMeters);
                 var ys = PickVolleyYs(volley, spawnYRange, MinRocketPairGap, () => Random.value);
-                foreach (float y in ys) ShowWarning(y);
 
-                await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
+                // Lock-on: in a tracked volley only the first rocket's warning follows the player
+                // (two trackers would converge into one); the rest keep their fixed heights.
+                bool tracked = player != null && Random.value < snapshot.RocketAggression;
+                LastVolleyTracked = tracked;
+                if (!tracked)
+                {
+                    foreach (float y in ys) ShowWarning(y, warningLeadSeconds);
+                    await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
+                    if (token.IsCancellationRequested) break;
+                    foreach (float y in ys) SpawnRocketNow(y);
+                    continue;
+                }
+
+                float trackSeconds = config.RocketTrackSeconds(snapshot.RampProgress01);
+                for (int i = 1; i < ys.Length; i++) ShowWarning(ys[i], trackSeconds + config.RocketLockSeconds);
+                float lockedY = await TrackWarningAsync(ys[0], trackSeconds, token);
                 if (token.IsCancellationRequested) break;
-                // Only the first rocket of a volley may home, or they'd converge into one.
-                for (int i = 0; i < ys.Length; i++) SpawnRocketNow(spawnY: ys[i], allowHoming: i == 0);
+                if (float.IsNaN(lockedY)) continue;
+
+                SpawnRocketNow(lockedY);
+                // The tracker may have moved next to a fixed rocket; drop any that would close the lane.
+                for (int i = 1; i < ys.Length; i++)
+                {
+                    if (Mathf.Abs(ys[i] - lockedY) >= MinRocketPairGap) SpawnRocketNow(ys[i]);
+                }
             }
+        }
+
+        private async Awaitable<float> TrackWarningAsync(float startY, float trackSeconds, CancellationToken token)
+        {
+            var warning = pool.Spawn(RocketWarningPoolId, new Vector3(warningX, startY, 0f), Quaternion.identity);
+            if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
+            {
+                indicator.Configure(pool, RocketWarningPoolId);
+                return await indicator.TrackAndLockAsync(player, trackSeconds, config.RocketLockSeconds, config.RocketTrackSpeed, spawnYRange);
+            }
+            await Awaitable.WaitForSecondsAsync(trackSeconds + config.RocketLockSeconds, token);
+            pool.Despawn(RocketWarningPoolId, warning);
+            return startY;
         }
 
         private async Awaitable RunCoinLoopAsync(CancellationToken token)
@@ -137,13 +171,13 @@ namespace JetpackRide.Spawning
             }
         }
 
-        private void ShowWarning(float y)
+        private void ShowWarning(float y, float seconds)
         {
             var warning = pool.Spawn(RocketWarningPoolId, new Vector3(warningX, y, 0f), Quaternion.identity);
             if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
             {
                 indicator.Configure(pool, RocketWarningPoolId);
-                indicator.PlayAndDespawnAsync(warningLeadSeconds).Forget();
+                indicator.PlayAndDespawnAsync(seconds).Forget();
             }
         }
 
@@ -159,7 +193,7 @@ namespace JetpackRide.Spawning
         // Picks `count` Ys in the band, each at least minGap from its neighbours so there's always a
         // lane to fly through. The band's slack beyond the mandatory gaps is split randomly between
         // them, so every result is valid by construction. If the band can't fit `count`, fewer are
-        // returned. Order is shuffled so the (possibly homing) first rocket isn't always the lowest.
+        // returned. Order is shuffled so the (possibly tracking) first rocket isn't always the lowest.
         public static float[] PickVolleyYs(int count, Vector2 yRange, float minGap, System.Func<float> random01)
         {
             float span = yRange.y - yRange.x;
@@ -323,20 +357,12 @@ namespace JetpackRide.Spawning
             }
         }
 
-        internal void SpawnRocketNow(float? spawnY = null, bool allowHoming = true)
+        // Rockets fly straight at spawnY; aiming happens beforehand via the tracking warning.
+        internal void SpawnRocketNow(float? spawnY = null)
         {
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-            bool homing = allowHoming && Random.value < snapshot.RocketAggression;
-            LastSpawnedRocketWasHoming = homing;
-
             var pos = new Vector3(spawnPoint.position.x, spawnY ?? Random.Range(spawnYRange.x, spawnYRange.y), 0f);
             var instance = pool.Spawn(RocketPoolId, pos, Quaternion.identity);
-
-            if (instance.TryGetComponent<RocketBehaviour>(out var rocket))
-            {
-                if (homing && player != null) rocket.SetTarget(player);
-                rocket.Init(homing);
-            }
             if (instance.TryGetComponent<HazardMover>(out var mover))
             {
                 mover.Configure(pool, RocketPoolId, snapshot.ScrollSpeed * config.RocketSpeedMultiplier, despawnX);

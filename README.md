@@ -83,8 +83,9 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Get Ready → Running → Game Over state machine with event-driven UI updates.
 * Jetpack thrust/gravity physics with player bounds clamping.
 * Object pooling for obstacles, rockets, and coins (no runtime allocation churn).
-* Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket homing aggression all scale with distance travelled.
-* Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and can optionally home in on the player.
+* Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket lock-on chance all scale with distance travelled.
+* Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and fly straight.
+* Rocket lock-on: in some volleys (chance from `RocketAggressionCurve`) one warning follows the player's height (capped speed) for 2s early / 1s late, blinks red for 0.3s as it locks, then the rocket launches straight at the locked height.
 * Zapper speed is independently tunable (`GameConfig.ZapperSpeedMultiplier`; `1.0` = locked to the background).
 * Vertical, horizontal, and ±45° diagonal zappers in three lengths (9-sliced sprite, 4-frame flicker); only vertical early on, and a cluster always leaves a flyable lane (`ZapperLayout`).
 * Coins and zappers keep at least 1 unit apart for as long as both are on screen, even when zappers drift (`SpawnSafety`); coins re-roll their height or skip, zappers shift or evict the coins in their way.
@@ -103,7 +104,6 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * `MainGame.unity` layout (sizing, HUD placement) is still being iterated on — not yet considered final.
 
 **Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), in progress):
-* Rocket lock-on: the warning tracks the player's height for 1–2s, locks, then the rocket flies straight (replaces in-flight homing).
 * Running animation on the floor (asset source still being decided).
 * Forward body tilt while free-falling.
 * Optional start animation (code-only run-in vs. wall-break still being decided).
