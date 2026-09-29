@@ -2002,7 +2002,7 @@ git commit -m "feat: add SpawnManager with async difficulty-driven obstacle/rock
 - Consumes: `GameManager` events `StateChanged`, `DistanceChanged`, `CoinsChanged`, `ScoreChanged` (Task 2.1).
 - Produces: `class UIManager : MonoBehaviour` with serialized `GameObject titlePanel`, `GameObject hudPanel`, `GameObject gameOverPanel`, `TMP_Text distanceText`, `TMP_Text coinsText`, `TMP_Text finalDistanceText`, `TMP_Text finalCoinsText`, `TMP_Text highScoreText`, `TMP_Text titleHighScoreText`. Panel visibility and text are purely a function of `GameManager` events — no polling.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using System.Collections;
@@ -2101,12 +2101,18 @@ public class UIManagerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `UIManager` not found.
 
-- [ ] **Step 3: Write `UIManager.cs`**
+> **Note (done 2026-09-29):** Two deviations from the code below:
+> 1. Neither `JetpackRide.Runtime.asmdef` nor `JetpackRide.PlayModeTests.asmdef` referenced the TextMeshPro assembly, needed for `using TMPro;`/`TMP_Text`. In Unity 6, `com.unity.textmeshpro` is folded into `com.unity.ugui`, whose TMP assembly is named `Unity.TextMeshPro` (confirmed via `Library/PackageCache/com.unity.ugui@.../Runtime/TMP/Unity.TextMeshPro.asmdef`). Added `"Unity.TextMeshPro"` to both asmdef `references` arrays before writing `UIManager.cs`, so the Step 2 failure below is a clean "`UIManager` not found" rather than a TMPro assembly-reference error.
+> 2. Same class of bug hit in Task 5.1: the code below wires `gameManager.StateChanged`/etc. in `Awake`, which `AddComponent<UIManager>()` fires synchronously, before the test's reflection `SetValue(ui, manager)` runs — `gameManager` would be null. Moved the wiring (and the `titleHighScoreText` seed) from `Awake` to `Start`, unsubscribe stays in `OnDestroy`; implemented this fix directly rather than reproducing the failure first, since Task 5.1 already established the pattern.
+>
+> Verified: compile-error run showed only `UIManager`-not-found errors (Step 2, TMPro wiring already correct); full PlayMode suite passed 35/35 (32 prior + 3 new) after Step 3.
+
+- [x] **Step 3: Write `UIManager.cs`**
 
 ```csharp
 using UnityEngine;
@@ -2181,12 +2187,12 @@ namespace JetpackRide.UI
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/UI Assets/Tests/PlayMode/UIManagerTests.cs
