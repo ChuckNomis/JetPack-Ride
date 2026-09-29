@@ -11,6 +11,7 @@ namespace JetpackRide.Spawning
         public const string ObstaclePoolId = "obstacle";
         public const string RocketPoolId = "rocket";
         public const string CoinPoolId = "coin";
+        public const string RocketWarningPoolId = "rocketWarning";
 
         [SerializeField] private GameManager gameManager;
         [SerializeField] private ObjectPoolManager pool;
@@ -19,6 +20,8 @@ namespace JetpackRide.Spawning
         [SerializeField] private Transform player;
         [SerializeField] private Vector2 spawnYRange = new(-3.5f, 3.5f);
         [SerializeField] private float despawnX = -14f;
+        [SerializeField] private float warningLeadSeconds = 0.5f;
+        [SerializeField] private float warningX = 8.5f;
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastSpawnedRocketWasHoming { get; private set; }
@@ -65,9 +68,21 @@ namespace JetpackRide.Spawning
             while (!token.IsCancellationRequested)
             {
                 var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-                await Awaitable.WaitForSecondsAsync(snapshot.RocketSpawnInterval, token);
+                float waitBeforeWarning = Mathf.Max(0.05f, snapshot.RocketSpawnInterval - warningLeadSeconds);
+                await Awaitable.WaitForSecondsAsync(waitBeforeWarning, token);
                 if (token.IsCancellationRequested) break;
-                SpawnRocketNow();
+
+                float y = Random.Range(spawnYRange.x, spawnYRange.y);
+                var warning = pool.Spawn(RocketWarningPoolId, new Vector3(warningX, y, 0f), Quaternion.identity);
+                if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
+                {
+                    indicator.Configure(pool, RocketWarningPoolId);
+                    indicator.PlayAndDespawnAsync(warningLeadSeconds).Forget();
+                }
+
+                await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
+                if (token.IsCancellationRequested) break;
+                SpawnRocketNow(spawnY: y);
             }
         }
 
@@ -83,13 +98,13 @@ namespace JetpackRide.Spawning
             ActiveObstacleCount++;
         }
 
-        internal void SpawnRocketNow()
+        internal void SpawnRocketNow(float? spawnY = null)
         {
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             bool homing = Random.value < snapshot.RocketAggression;
             LastSpawnedRocketWasHoming = homing;
 
-            var pos = new Vector3(spawnPoint.position.x, Random.Range(spawnYRange.x, spawnYRange.y), 0f);
+            var pos = new Vector3(spawnPoint.position.x, spawnY ?? Random.Range(spawnYRange.x, spawnYRange.y), 0f);
             var instance = pool.Spawn(RocketPoolId, pos, Quaternion.identity);
 
             if (instance.TryGetComponent<RocketBehaviour>(out var rocket))

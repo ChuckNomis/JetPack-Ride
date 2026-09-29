@@ -1122,6 +1122,10 @@ MonoBehaviour:
     prefab: {fileID: 426721511300580357, guid: a0727d28ab8f5154db934829318267c8, type: 3}
     defaultCapacity: 10
     maxSize: 40
+  - id: rocketWarning
+    prefab: {fileID: 2636556665403456957, guid: 614981f89dba110488f33295a84805a7, type: 3}
+    defaultCapacity: 3
+    maxSize: 10
 --- !u!4 &737916794
 Transform:
   m_ObjectHideFlags: 0
@@ -1979,6 +1983,8 @@ MonoBehaviour:
   player: {fileID: 96190707}
   spawnYRange: {x: -3.5, y: 3.5}
   despawnX: -14
+  warningLeadSeconds: 0.5
+  warningX: 8.5
 --- !u!4 &1478857592
 Transform:
   m_ObjectHideFlags: 0
@@ -2591,8 +2597,6 @@ SceneRoots:
   - {fileID: 96190707}
   - {fileID: 2082415507}
   - {fileID: 428304946}
-  - {fileID: 1739508670}
-  - {fileID: 1359855904}
   - {fileID: 634703070}
   - {fileID: 260780030}
   - {fileID: 900000003}
