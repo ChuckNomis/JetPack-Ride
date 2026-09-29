@@ -204,7 +204,7 @@ namespace JetpackRide.Spawning
                 var instance = pool.Spawn(ObstaclePoolId, pos, Quaternion.identity);
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {
-                    mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed, despawnX);
+                    mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed * config.ZapperSpeedMultiplier, despawnX);
                 }
                 ActiveObstacleCount++;
             }

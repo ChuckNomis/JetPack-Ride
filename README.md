@@ -36,7 +36,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | Script | Attached To | Description |
 |---|---|---|
 | `Core/GameManager` | `GameManager` | Central state machine (`GameState`: `GetReady`/`Running`/`GameOver`). Owns distance, coins, score, and persisted high score (`PlayerPrefs`); fires `StateChanged`/`DistanceChanged`/`CoinsChanged`/`ScoreChanged` events. |
-| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket speed multiplier, obstacle/rocket spawn intervals, difficulty ramp curves, coin value, restart lockout. |
+| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curves, coin value, restart lockout. |
 | `Core/DifficultyEvaluator` | (static, no GameObject) | Pure function mapping distance travelled → a `DifficultySnapshot` (scroll speed, spawn intervals, rocket aggression), driven by `GameConfig`'s curves. |
 | `Core/DistanceTracker` | `DistanceTracker` | Ticks `GameManager.AddDistance()` each frame using the current scroll speed while `Running`. |
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
@@ -85,6 +85,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Object pooling for obstacles, rockets, and coins (no runtime allocation churn).
 * Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket homing aggression all scale with distance travelled.
 * Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and can optionally home in on the player.
+* Zapper speed is independently tunable (`GameConfig.ZapperSpeedMultiplier`; `1.0` = locked to the background).
 * Coin collection feeding into score, alongside distance.
 * Persisted high score (`PlayerPrefs`) shown on the title screen and Game Over panel.
 * Full run reset on restart — no leftover hazards from the previous run.
@@ -99,8 +100,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 **Pending / known gaps:**
 * `MainGame.unity` layout (sizing, HUD placement) is still being iterated on — not yet considered final.
 
-**Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), not started):
-* Zapper speed multiplier in `GameConfig` (independent of scroll speed).
+**Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), in progress):
 * Vertical, horizontal, and diagonal zappers with length variants, always leaving a flyable lane.
 * Coins only in batches, in shapes: line, arc, arrow, box, rectangle.
 * Safety distance so coins and zappers never overlap or spawn touching.
