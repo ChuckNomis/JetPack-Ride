@@ -12,7 +12,8 @@ namespace JetpackRide.Spawning
         public const string RocketPoolId = "rocket";
         public const string CoinPoolId = "coin";
         public const string RocketWarningPoolId = "rocketWarning";
-        public const float MaxClusterYDelta = 2.5f;
+        // Free vertical stretch a zapper cluster must leave: player diameter (0.67) plus a margin.
+        public const float MinZapperLane = 1.3f;
         public const float MinRocketPairGap = 3f;
 
         [SerializeField] private GameManager gameManager;
@@ -30,6 +31,11 @@ namespace JetpackRide.Spawning
         [SerializeField, Range(0f, 1f)] private float coinChainChance = 0.6f;
         [SerializeField] private float coinSpacing = 0.8f;
         [SerializeField] private float coinArcHeight = 1.2f;
+        [Tooltip("World-unit zapper lengths, short..long; the longest unlocks later in a run.")]
+        [SerializeField] private float[] zapperLengths = { 2.4f, 3.3f, 4.4f };
+        [Tooltip("Collider thickness used for layout; must be >= the prefab's real beam thickness.")]
+        [SerializeField] private float zapperThickness = 0.85f;
+        [SerializeField] private float zapperClusterGap = 1f;
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastSpawnedRocketWasHoming { get; private set; }
@@ -192,16 +198,17 @@ namespace JetpackRide.Spawning
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             int clusterSize = DetermineObstacleClusterSize(snapshot.RampProgress01);
 
-            // Later cluster members stay within MaxClusterYDelta of the first, so a single open lane
-            // runs through the whole pair instead of demanding a full-height swerve in ~0.1s.
-            float firstY = Random.Range(spawnYRange.x, spawnYRange.y);
-            for (int i = 0; i < clusterSize; i++)
+            // The layout keeps every beam inside the band and the cluster's combined vertical span
+            // leaves at least MinZapperLane free, so there is always a lane through the whole cluster.
+            var cluster = ZapperLayout.PlanCluster(clusterSize, snapshot.RampProgress01, spawnYRange,
+                zapperThickness, zapperLengths, MinZapperLane, zapperClusterGap, () => Random.value);
+            foreach (var zapper in cluster)
             {
-                float y = i == 0
-                    ? firstY
-                    : Random.Range(Mathf.Max(spawnYRange.x, firstY - MaxClusterYDelta), Mathf.Min(spawnYRange.y, firstY + MaxClusterYDelta));
-                var pos = new Vector3(spawnPoint.position.x + i * 2.5f, y, 0f);
-                var instance = pool.Spawn(ObstaclePoolId, pos, Quaternion.identity);
+                var pos = new Vector3(spawnPoint.position.x + zapper.Center.x, zapper.Center.y, 0f);
+                var rotation = Quaternion.Euler(0f, 0f, ZapperLayout.AngleDegrees(zapper.Orientation));
+                var instance = pool.Spawn(ObstaclePoolId, pos, rotation);
+                if (instance.TryGetComponent<ZapperShape>(out var shape)) shape.Configure(zapper.Orientation, zapper.Length);
+                else instance.transform.rotation = rotation;
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {
                     mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed * config.ZapperSpeedMultiplier, despawnX);

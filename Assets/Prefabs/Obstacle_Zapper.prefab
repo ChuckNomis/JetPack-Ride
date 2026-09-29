@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6880232796846371332}
   - component: {fileID: 389671925328058108}
   - component: {fileID: 3790587186839183219}
+  - component: {fileID: 7939160384591986814}
   m_Layer: 0
   m_Name: Obstacle_Zapper
   m_TagString: Hazard
@@ -88,7 +89,7 @@ SpriteRenderer:
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
-  m_DrawMode: 0
+  m_DrawMode: 1
   m_Size: {x: 0.46, y: 1.09}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
@@ -130,12 +131,12 @@ BoxCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
+    border: {x: 0, y: 0.32, z: 0, w: 0.32}
     pivot: {x: 0.5, y: 0.5}
     oldSize: {x: 0.46, y: 1.09}
     newSize: {x: 0.46, y: 1.09}
     adaptiveTilingThreshold: 0.5
-    drawMode: 0
+    drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
   m_Size: {x: 0.46, y: 1.09}
@@ -164,3 +165,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e8f5bba0c94663418b42acf3e146833, type: 3}
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Hazards.ObstacleBehaviour
+--- !u!114 &7939160384591986814
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287536114812420162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d280cee84a5ad29499ecfd7c30a99606, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Hazards.ZapperShape
+  beamWidthFactor: 0.6
+  endInset: 0.06
+  frames:
+  - {fileID: -411094702275733976, guid: 37fe82f1371aa4d4185dc723f6d17f6e, type: 3}
+  - {fileID: 4019062829790394656, guid: 1a318116a25d8944b97cb6bab764b140, type: 3}
+  - {fileID: 4949154167724182008, guid: 0e783817e4d301f4c956183c9d94d8c4, type: 3}
+  - {fileID: -8319247914175173007, guid: 639f2842afabaa94b81e46d74bc9e9ea, type: 3}
+  framesPerSecond: 12

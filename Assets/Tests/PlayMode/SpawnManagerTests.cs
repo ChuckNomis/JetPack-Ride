@@ -17,6 +17,11 @@ public class SpawnManagerTests
             .SetValue(manager, config);
 
         var obstaclePrefab = new GameObject("ObstaclePrefab");
+        var zapperSprite = Sprite.Create(new Texture2D(46, 110), new Rect(0, 0, 46, 110), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(0, 32, 0, 32));
+        obstaclePrefab.transform.localScale = new Vector3(3f, 3f, 1f);
+        obstaclePrefab.AddComponent<SpriteRenderer>().sprite = zapperSprite;
+        obstaclePrefab.AddComponent<BoxCollider2D>().isTrigger = true;
+        obstaclePrefab.AddComponent<JetpackRide.Hazards.ZapperShape>();
         obstaclePrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         obstaclePrefab.SetActive(false);
         var rocketPrefab = new GameObject("RocketPrefab");
@@ -162,28 +167,32 @@ public class SpawnManagerTests
         Assert.AreEqual(before, spawner.ActiveObstacleCount);
     }
     [UnityTest]
-    public IEnumerator SpawnObstacleNow_HighRampCluster_KeepsSharedOpenLane()
+    public IEnumerator SpawnObstacleNow_HighRampCluster_LeavesFlyableLane_AndMixesOrientations()
     {
         var (spawner, manager, pool) = Build();
         yield return null;
         manager.BeginRun();
-        manager.AddDistance(5000f); // past the ramp: clusters of 2
+        manager.AddDistance(5000f); // past the ramp: clusters of 2, all orientations unlocked
 
-        // Independent random Ys can put one zapper high and the next low 2.5 units later, which
-        // is unfair at max scroll speed. The pair must stay within MaxClusterYDelta of each other.
+        bool sawRotated = false;
         for (int trial = 0; trial < 50; trial++)
         {
             pool.DespawnAll();
             spawner.SpawnObstacleNow();
-            var ys = new System.Collections.Generic.List<float>();
+            Physics2D.SyncTransforms();
+            var spans = new System.Collections.Generic.List<Vector2>();
             foreach (Transform child in pool.transform)
             {
-                if (child.gameObject.activeSelf) ys.Add(child.position.y);
+                if (!child.gameObject.activeSelf || !child.TryGetComponent<BoxCollider2D>(out var box)) continue;
+                spans.Add(new Vector2(box.bounds.min.y, box.bounds.max.y));
+                if (Mathf.Abs(Mathf.DeltaAngle(child.eulerAngles.z, 0f)) > 1f) sawRotated = true;
             }
-            Assert.AreEqual(2, ys.Count);
-            Assert.LessOrEqual(Mathf.Abs(ys[0] - ys[1]), SpawnManager.MaxClusterYDelta + 1e-4f);
+            Assert.AreEqual(2, spans.Count);
+            Assert.GreaterOrEqual(JetpackRide.Spawning.ZapperLayout.LargestGap(spans, new Vector2(-3.5f, 3.5f)), SpawnManager.MinZapperLane - 1e-3f);
         }
+        Assert.IsTrue(sawRotated, "horizontal/diagonal zappers appear late in a run");
     }
+
     [UnityTest]
     public IEnumerator SpawnCoinsNow_SpawnsWholePatternAtOrBeyondSpawnPoint()
     {

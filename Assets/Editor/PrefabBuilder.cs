@@ -29,7 +29,7 @@ namespace JetpackRide.EditorTools
 
             BuildPrefab("Obstacle_Zapper", "Zapper1", "Hazards", "Hazard",
                 go => go.AddComponent<BoxCollider2D>(),
-                typeof(HazardMover), typeof(ObstacleBehaviour));
+                typeof(HazardMover), typeof(ObstacleBehaviour), typeof(ZapperShape));
 
             BuildPrefab("Rocket", "Rocket", "Hazards", "Hazard",
                 go => go.AddComponent<BoxCollider2D>(),
@@ -66,6 +66,68 @@ namespace JetpackRide.EditorTools
             RegisterPoolEntry("rocketWarning", $"{PrefabDir}/RocketWarning.prefab", 3, 10);
             AssetDatabase.SaveAssets();
             Debug.Log("[PrefabBuilder] RocketWarning prefab built and pool entry registered.");
+        }
+
+        // 9-slices the four zapper frames (orb end caps as borders) and turns Obstacle_Zapper into a
+        // sliced, resizable, flickering beam driven by ZapperShape. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildZapperVariants
+        [MenuItem("Jetpack Ride/Build Zapper Variants")]
+        public static void BuildZapperVariants()
+        {
+            var frames = new Sprite[ZapperFrameCount];
+            for (int i = 0; i < ZapperFrameCount; i++)
+            {
+                SliceZapperSprite($"{SpriteDir}/Zapper{i + 1}.png");
+                frames[i] = LoadSprite($"Zapper{i + 1}");
+            }
+
+            var path = $"{PrefabDir}/Obstacle_Zapper.prefab";
+            var zapper = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var renderer = zapper.GetComponent<SpriteRenderer>();
+                renderer.sprite = frames[0];
+                renderer.drawMode = SpriteDrawMode.Sliced;
+                renderer.size = frames[0].bounds.size;
+
+                var shape = zapper.GetComponent<ZapperShape>() ?? zapper.AddComponent<ZapperShape>();
+                var so = new SerializedObject(shape);
+                var framesProp = so.FindProperty("frames");
+                framesProp.arraySize = frames.Length;
+                for (int i = 0; i < frames.Length; i++) framesProp.GetArrayElementAtIndex(i).objectReferenceValue = frames[i];
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                PrefabUtility.SaveAsPrefabAsset(zapper, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(zapper);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Zapper sprites 9-sliced and Obstacle_Zapper updated.");
+        }
+
+        private const int ZapperFrameCount = 4;
+        // Orb caps are the top/bottom ~32px of the 46x~110 sprite; only the bolt between stretches.
+        private const float ZapperCapPixels = 32f;
+
+        private static void SliceZapperSprite(string path)
+        {
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect; // required for sliced drawing
+            importer.SetTextureSettings(settings);
+
+            var factory = new UnityEditor.U2D.Sprites.SpriteDataProviderFactories();
+            factory.Init();
+            var provider = factory.GetSpriteEditorDataProviderFromObject(importer);
+            provider.InitSpriteEditorDataProvider();
+            var rects = provider.GetSpriteRects();
+            foreach (var rect in rects) rect.border = new Vector4(0f, ZapperCapPixels, 0f, ZapperCapPixels);
+            provider.SetSpriteRects(rects);
+            provider.Apply();
+            importer.SaveAndReimport();
         }
 
         // Particle FX (GDD §8.2). Not pooled: one-shots destroy themselves via StopAction.Destroy.
