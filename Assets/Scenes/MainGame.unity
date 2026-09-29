@@ -168,7 +168,7 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 3f9c1734f2cf17141aaa195bea2a9b21, type: 2}
   gameManager: {fileID: 1960459901}
   MinY: -3.5
-  MaxY: 4.8
+  MaxY: 3.5
 --- !u!58 &96190704
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -203,8 +203,8 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.038579226, y: 0.00277555}
-  m_Radius: 0.18437672
+  m_Offset: {x: 0.022048831, y: 0.00277555}
+  m_Radius: 0.16784632
 --- !u!50 &96190705
 Rigidbody2D:
   serializedVersion: 5
@@ -976,8 +976,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -166, y: -75}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: -1715.91, y: -86.5}
+  m_SizeDelta: {x: 288.19, y: 73}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &640198851
 MonoBehaviour:
@@ -1011,7 +1011,7 @@ MonoBehaviour:
     rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
-  m_colorMode: 3
+  m_colorMode: 2
   m_fontColorGradient:
     topLeft: {r: 1, g: 1, b: 1, a: 1}
     topRight: {r: 1, g: 1, b: 1, a: 1}
@@ -1026,8 +1026,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 64
+  m_fontSizeBase: 64
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1946,8 +1946,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 160, y: -75}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 209.84003, y: -158.96002}
+  m_SizeDelta: {x: 299.68, y: 51.92}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1429862908
 MonoBehaviour:
