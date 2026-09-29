@@ -167,7 +167,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Player.PlayerController
   config: {fileID: 11400000, guid: 3f9c1734f2cf17141aaa195bea2a9b21, type: 2}
   gameManager: {fileID: 1960459901}
-  MinY: -4.8
+  MinY: -3.5
   MaxY: 4.8
 --- !u!58 &96190704
 CircleCollider2D:
@@ -353,7 +353,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 147820121}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -1170,8 +1170,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 3, y: 135}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 3.8, y: 134.9}
+  m_SizeDelta: {x: 381.95, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &744106512
 MonoBehaviour:
@@ -1382,8 +1382,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 2.999939, y: 85.00001}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 3.7999954, y: 84.899994}
+  m_SizeDelta: {x: 381.95, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &795578663
 MonoBehaviour:
@@ -1699,7 +1699,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Environment.ParallaxLayer
   gameManager: {fileID: 1960459901}
-  ScrollSpeedMultiplier: 1
+  ScrollSpeedMultiplier: 0.3
   TileWidth: 23.04
 --- !u!212 &1359855903
 SpriteRenderer:
@@ -2147,7 +2147,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1541401680}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -2226,7 +2226,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1622002034}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -2288,7 +2288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Environment.ParallaxLayer
   gameManager: {fileID: 1960459901}
-  ScrollSpeedMultiplier: 1
+  ScrollSpeedMultiplier: 0.3
   TileWidth: 23.04
 --- !u!212 &1739508669
 SpriteRenderer:
@@ -2443,8 +2443,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 3, y: 29.000008}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 3.7999954, y: 28.89998}
+  m_SizeDelta: {x: 381.95, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2034867458
 MonoBehaviour:

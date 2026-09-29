@@ -11,7 +11,7 @@ namespace JetpackRide.Player
         [SerializeField] private GameConfig config;
         [SerializeField] private GameManager gameManager;
 
-        public float MinY = -4.5f;
+        public float MinY = -3.5f;
         public float MaxY = 4.5f;
 
         public event System.Action Died;

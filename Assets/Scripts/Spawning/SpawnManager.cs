@@ -99,7 +99,7 @@ namespace JetpackRide.Spawning
             }
             if (instance.TryGetComponent<HazardMover>(out var mover))
             {
-                mover.Configure(pool, RocketPoolId, snapshot.ScrollSpeed, despawnX);
+                mover.Configure(pool, RocketPoolId, snapshot.ScrollSpeed * config.RocketSpeedMultiplier, despawnX);
             }
         }
     }

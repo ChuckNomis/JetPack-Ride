@@ -17,9 +17,11 @@ public class SpawnManagerTests
             .SetValue(manager, config);
 
         var obstaclePrefab = new GameObject("ObstaclePrefab");
+        obstaclePrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         obstaclePrefab.SetActive(false);
         var rocketPrefab = new GameObject("RocketPrefab");
         rocketPrefab.AddComponent<JetpackRide.Hazards.RocketBehaviour>();
+        rocketPrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         rocketPrefab.SetActive(false);
 
         var poolGo = new GameObject("Pool");
@@ -83,6 +85,38 @@ public class SpawnManagerTests
         }
 
         Assert.IsTrue(sawHoming);
+    }
+
+    [UnityTest]
+    public IEnumerator SpawnRocketNow_ConfiguresFasterThanObstacle()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+
+        // Isolate from leftover HazardMover instances other tests spawned into the shared scene.
+        foreach (var stale in Object.FindObjectsByType<JetpackRide.Hazards.HazardMover>(FindObjectsSortMode.None))
+        {
+            Object.DestroyImmediate(stale.gameObject);
+        }
+
+        spawner.SpawnObstacleNow();
+        spawner.SpawnRocketNow();
+        yield return null;
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var poolIdField = typeof(JetpackRide.Hazards.HazardMover).GetField("poolId", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        float obstacleSpeed = -1f, rocketSpeed = -1f;
+        foreach (var mover in Object.FindObjectsByType<JetpackRide.Hazards.HazardMover>(FindObjectsSortMode.None))
+        {
+            var id = (string)poolIdField.GetValue(mover);
+            var speed = (float)speedField.GetValue(mover);
+            if (id == SpawnManager.ObstaclePoolId) obstacleSpeed = speed;
+            if (id == SpawnManager.RocketPoolId) rocketSpeed = speed;
+        }
+
+        Assert.Greater(rocketSpeed, obstacleSpeed);
     }
 
     [UnityTest]

@@ -14,6 +14,9 @@ namespace JetpackRide.Core
         [SerializeField] private float jetpackThrust = 60f;
         [SerializeField] private float gravityScale = 3.8f;
 
+        [Header("Rocket Speed")]
+        [SerializeField] private float rocketSpeedMultiplier = 1.5f;
+
         [Header("Obstacle Spawning")]
         [SerializeField] private float baseObstacleSpawnInterval = 1.8f;
         [SerializeField] private float minObstacleSpawnInterval = 0.6f;
@@ -38,6 +41,7 @@ namespace JetpackRide.Core
         public float MaxScrollSpeed => maxScrollSpeed;
         public float JetpackThrust => jetpackThrust;
         public float GravityScale => gravityScale;
+        public float RocketSpeedMultiplier => rocketSpeedMultiplier;
         public float BaseObstacleSpawnInterval => baseObstacleSpawnInterval;
         public float MinObstacleSpawnInterval => minObstacleSpawnInterval;
         public float BaseRocketSpawnInterval => baseRocketSpawnInterval;
