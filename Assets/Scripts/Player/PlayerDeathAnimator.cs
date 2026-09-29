@@ -5,11 +5,13 @@ using JetpackRide.Core;
 namespace JetpackRide.Player
 {
     // Death animation: on GameOver the player swaps to the dead sprite, hops, and tumbles backward
-    // while falling to the floor; GetReady restores the flying pose for the next run.
-    [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D))]
+    // while falling to the floor; GetReady restores the flying pose for the next run. Sprite and
+    // rotation live on `target` (the child Visual), so the root's collider never rotates.
+    [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerDeathAnimator : MonoBehaviour
     {
         [SerializeField] private GameManager gameManager;
+        [SerializeField] private SpriteRenderer target;
         [SerializeField] private Sprite deadSprite;
         [SerializeField] private float hopSpeed = 6f;
         [SerializeField] private float tumbleSeconds = 0.6f;
@@ -22,7 +24,8 @@ namespace JetpackRide.Player
 
         private void Awake()
         {
-            spriteRenderer = GetComponent<SpriteRenderer>();
+            if (target == null) target = GetComponentInChildren<SpriteRenderer>();
+            spriteRenderer = target;
             body = GetComponent<Rigidbody2D>();
         }
 
@@ -52,7 +55,7 @@ namespace JetpackRide.Player
             else
             {
                 spriteRenderer.sprite = aliveSprite;
-                transform.rotation = Quaternion.identity;
+                spriteRenderer.transform.localRotation = Quaternion.identity;
             }
         }
 
@@ -66,9 +69,9 @@ namespace JetpackRide.Player
                 // Backward flip (counter-clockwise), easing out so it settles lying flat.
                 float t = Mathf.Clamp01(elapsed / tumbleSeconds);
                 float eased = 1f - (1f - t) * (1f - t);
-                transform.rotation = Quaternion.Euler(0f, 0f, eased * tumbleDegrees);
+                spriteRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, eased * tumbleDegrees);
             }
-            transform.rotation = Quaternion.identity;
+            spriteRenderer.transform.localRotation = Quaternion.identity;
         }
     }
 }

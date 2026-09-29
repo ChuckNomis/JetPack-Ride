@@ -17,6 +17,11 @@ public class SpawnManagerTests
             .SetValue(manager, config);
 
         var obstaclePrefab = new GameObject("ObstaclePrefab");
+        var zapperSprite = Sprite.Create(new Texture2D(46, 110), new Rect(0, 0, 46, 110), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(0, 32, 0, 32));
+        obstaclePrefab.transform.localScale = new Vector3(3f, 3f, 1f);
+        obstaclePrefab.AddComponent<SpriteRenderer>().sprite = zapperSprite;
+        obstaclePrefab.AddComponent<BoxCollider2D>().isTrigger = true;
+        obstaclePrefab.AddComponent<JetpackRide.Hazards.ZapperShape>();
         obstaclePrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         obstaclePrefab.SetActive(false);
         var rocketPrefab = new GameObject("RocketPrefab");
@@ -27,6 +32,10 @@ public class SpawnManagerTests
         coinPrefab.AddComponent<JetpackRide.Pickups.CoinBehaviour>();
         coinPrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         coinPrefab.SetActive(false);
+        var warningPrefab = new GameObject("WarningPrefab");
+        warningPrefab.AddComponent<SpriteRenderer>();
+        warningPrefab.AddComponent<JetpackRide.Hazards.RocketWarningIndicator>();
+        warningPrefab.SetActive(false);
 
         var poolGo = new GameObject("Pool");
         var pool = poolGo.AddComponent<ObjectPoolManager>();
@@ -46,6 +55,7 @@ public class SpawnManagerTests
         AddEntry("obstacle", obstaclePrefab);
         AddEntry("rocket", rocketPrefab);
         AddEntry("coin", coinPrefab);
+        AddEntry("rocketWarning", warningPrefab);
         typeof(ObjectPoolManager).GetField("poolEntries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
             .SetValue(pool, list);
 
@@ -75,21 +85,46 @@ public class SpawnManagerTests
     }
 
     [UnityTest]
-    public IEnumerator SpawnRocketNow_AtHighDistance_CanProduceHomingRocket()
+    public IEnumerator RocketLoop_TrackedVolley_LaunchesAtLockedPlayerY()
     {
         var (spawner, manager, pool) = Build();
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", flags).GetValue(spawner);
+        void Set(string field, object value) => typeof(GameConfig).GetField(field, flags).SetValue(config, value);
+        Set("baseRocketSpawnInterval", 0.6f);
+        Set("minRocketSpawnInterval", 0.6f);
+        Set("rocketTrackSecondsEarly", 0.2f);
+        Set("rocketTrackSecondsLate", 0.2f);
+        Set("rocketLockSeconds", 0.1f);
+        Set("rocketTrackSpeed", 1000f);
+        Set("rocketAggressionCurve", AnimationCurve.Constant(0f, 1f, 1f)); // every volley tracks
+
+        var player = new GameObject("Player").transform;
+        player.position = new Vector3(-6f, 2f, 0f);
+        typeof(SpawnManager).GetField("player", flags).SetValue(spawner, player);
+
+        int launched = 0;
+        spawner.RocketSpawned += () => launched++;
         yield return null;
         manager.BeginRun();
-        manager.AddDistance(100000f); // far past ramp distance -> rocketAggression == 1
+        manager.AddDistance(100000f);
 
-        bool sawHoming = false;
-        for (int i = 0; i < 20; i++)
+        for (float t = 0f; t < 3f && launched == 0; t += Time.deltaTime) yield return null;
+        yield return null;
+        manager.EndRun();
+
+        Assert.Greater(launched, 0, "a volley launched");
+        Assert.IsTrue(spawner.LastVolleyTracked);
+        var ys = new System.Collections.Generic.List<float>();
+        foreach (Transform child in pool.transform)
         {
-            spawner.SpawnRocketNow();
-            if (spawner.LastSpawnedRocketWasHoming) sawHoming = true;
+            if (child.gameObject.activeSelf && child.GetComponent<JetpackRide.Hazards.RocketBehaviour>() != null) ys.Add(child.position.y);
         }
-
-        Assert.IsTrue(sawHoming);
+        Assert.IsTrue(ys.Exists(y => Mathf.Abs(y - 2f) < 0.05f), "one rocket flies at the locked player height: " + string.Join(", ", ys));
+        for (int i = 0; i < ys.Count; i++)
+            for (int j = i + 1; j < ys.Count; j++)
+                Assert.GreaterOrEqual(Mathf.Abs(ys[i] - ys[j]), SpawnManager.MinRocketPairGap - 1e-3f, "volley keeps a flyable lane");
+        Object.DestroyImmediate(player.gameObject);
     }
 
     [UnityTest]
@@ -125,6 +160,30 @@ public class SpawnManagerTests
     }
 
     [UnityTest]
+    public IEnumerator SpawnObstacleNow_SpeedIsScrollSpeedTimesZapperMultiplier()
+    {
+        var (spawner, manager, pool) = Build();
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        typeof(GameConfig).GetField("zapperSpeedMultiplier", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(config, 0.7f);
+        yield return null;
+        manager.BeginRun();
+
+        pool.DespawnAll();
+        spawner.SpawnObstacleNow();
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        float expected = DifficultyEvaluator.Evaluate(manager.DistanceMeters, config).ScrollSpeed * 0.7f;
+        int checkedCount = 0;
+        foreach (Transform child in pool.transform)
+        {
+            if (!child.gameObject.activeSelf || !child.TryGetComponent<JetpackRide.Hazards.HazardMover>(out var mover)) continue;
+            Assert.AreEqual(expected, (float)speedField.GetValue(mover), 1e-4f);
+            checkedCount++;
+        }
+        Assert.Greater(checkedCount, 0);
+    }
+
+    [UnityTest]
     public IEnumerator StateChangedToGameOver_StopsFurtherAutomaticSpawns()
     {
         var (spawner, manager, pool) = Build();
@@ -138,28 +197,32 @@ public class SpawnManagerTests
         Assert.AreEqual(before, spawner.ActiveObstacleCount);
     }
     [UnityTest]
-    public IEnumerator SpawnObstacleNow_HighRampCluster_KeepsSharedOpenLane()
+    public IEnumerator SpawnObstacleNow_HighRampCluster_LeavesFlyableLane_AndMixesOrientations()
     {
         var (spawner, manager, pool) = Build();
         yield return null;
         manager.BeginRun();
-        manager.AddDistance(5000f); // past the ramp: clusters of 2
+        manager.AddDistance(5000f); // past the ramp: clusters of 2, all orientations unlocked
 
-        // Independent random Ys can put one zapper high and the next low 2.5 units later, which
-        // is unfair at max scroll speed. The pair must stay within MaxClusterYDelta of each other.
+        bool sawRotated = false;
         for (int trial = 0; trial < 50; trial++)
         {
             pool.DespawnAll();
             spawner.SpawnObstacleNow();
-            var ys = new System.Collections.Generic.List<float>();
+            Physics2D.SyncTransforms();
+            var spans = new System.Collections.Generic.List<Vector2>();
             foreach (Transform child in pool.transform)
             {
-                if (child.gameObject.activeSelf) ys.Add(child.position.y);
+                if (!child.gameObject.activeSelf || !child.TryGetComponent<BoxCollider2D>(out var box)) continue;
+                spans.Add(new Vector2(box.bounds.min.y, box.bounds.max.y));
+                if (Mathf.Abs(Mathf.DeltaAngle(child.eulerAngles.z, 0f)) > 1f) sawRotated = true;
             }
-            Assert.AreEqual(2, ys.Count);
-            Assert.LessOrEqual(Mathf.Abs(ys[0] - ys[1]), SpawnManager.MaxClusterYDelta + 1e-4f);
+            Assert.AreEqual(2, spans.Count);
+            Assert.GreaterOrEqual(JetpackRide.Spawning.ZapperLayout.LargestGap(spans, new Vector2(-3.5f, 3.5f)), SpawnManager.MinZapperLane - 1e-3f);
         }
+        Assert.IsTrue(sawRotated, "horizontal/diagonal zappers appear late in a run");
     }
+
     [UnityTest]
     public IEnumerator SpawnCoinsNow_SpawnsWholePatternAtOrBeyondSpawnPoint()
     {
@@ -177,20 +240,76 @@ public class SpawnManagerTests
             active++;
             Assert.GreaterOrEqual(child.position.x, 12f - 1f, "coins enter from the right");
         }
-        Assert.GreaterOrEqual(spawned, 1);
+        Assert.GreaterOrEqual(spawned, 2);
         Assert.AreEqual(spawned, active);
     }
 
-    [Test]
-    public void CoinPatternOffsets_Chain_IsEvenlySpacedArc()
+    [UnityTest]
+    public IEnumerator SpawnCoinsNow_AlwaysABatch_InsideTheBand()
     {
-        var offsets = SpawnManager.CoinPatternOffsets(5, spacing: 0.8f, arcHeight: 1f);
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
 
-        Assert.AreEqual(5, offsets.Length);
-        for (int i = 1; i < offsets.Length; i++) Assert.AreEqual(0.8f, offsets[i].x - offsets[i - 1].x, 1e-4f);
-        Assert.AreEqual(0f, offsets[0].y, 1e-4f);
-        Assert.AreEqual(0f, offsets[4].y, 1e-4f);
-        Assert.AreEqual(1f, offsets[2].y, 1e-4f, "middle coin is the arc's peak");
+        foreach (float distance in new[] { 0f, 1000f, 5000f })
+        {
+            manager.AddDistance(distance);
+            for (int i = 0; i < 30; i++)
+            {
+                pool.DespawnAll();
+                int spawned = spawner.SpawnCoinsNow();
+                Assert.GreaterOrEqual(spawned, 2, "coins only come in batches");
+                foreach (Transform child in pool.transform)
+                {
+                    if (!child.gameObject.activeSelf || child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() == null) continue;
+                    Assert.GreaterOrEqual(child.position.y, -3.5f - 1e-4f);
+                    Assert.LessOrEqual(child.position.y, 3.5f + 1e-4f);
+                }
+            }
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator CoinsAndZappers_ForcedOverlappingSpawns_KeepClearance([Values(0.7f, 1f, 1.3f)] float zapperMultiplier)
+    {
+        var (spawner, manager, pool) = Build();
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        typeof(GameConfig).GetField("zapperSpeedMultiplier", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(config, zapperMultiplier);
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(5000f);
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        float coinRadius = (float)typeof(SpawnManager).GetField("coinRadius", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        int trialsWithBoth = 0;
+        for (int trial = 0; trial < 60; trial++)
+        {
+            pool.DespawnAll();
+            // Both spawn at the same spawn point, so overlaps are forced unless the spawner avoids them.
+            if (trial % 2 == 0) { spawner.SpawnCoinsNow(); spawner.SpawnObstacleNow(); }
+            else { spawner.SpawnObstacleNow(); spawner.SpawnCoinsNow(); }
+            Physics2D.SyncTransforms();
+
+            var coins = new System.Collections.Generic.List<(Rect rect, float speed)>();
+            var zappers = new System.Collections.Generic.List<(Rect rect, float speed)>();
+            foreach (Transform child in pool.transform)
+            {
+                if (!child.gameObject.activeSelf) continue;
+                var mover = child.GetComponent<JetpackRide.Hazards.HazardMover>();
+                float speed = (float)speedField.GetValue(mover);
+                if (child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null)
+                    coins.Add((new Rect(child.position.x - coinRadius, child.position.y - coinRadius, 2 * coinRadius, 2 * coinRadius), speed));
+                else if (child.TryGetComponent<BoxCollider2D>(out var box))
+                    zappers.Add((new Rect(box.bounds.min, box.bounds.size), speed));
+            }
+            Assert.Greater(zappers.Count, 0, "hazards always spawn");
+            if (coins.Count > 0) trialsWithBoth++;
+            foreach (var c in coins)
+                foreach (var z in zappers)
+                    Assert.IsFalse(SpawnSafety.WillOverlap(c.rect, c.speed, z.rect, z.speed, SpawnManager.CoinZapperClearance - 1e-3f, -14f),
+                        $"trial {trial}: coin {c.rect} vs zapper {z.rect}");
+        }
+        Assert.Greater(trialsWithBoth, 10, "coins still spawn alongside zappers most of the time");
     }
 
     [Test]

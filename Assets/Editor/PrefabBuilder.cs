@@ -29,7 +29,7 @@ namespace JetpackRide.EditorTools
 
             BuildPrefab("Obstacle_Zapper", "Zapper1", "Hazards", "Hazard",
                 go => go.AddComponent<BoxCollider2D>(),
-                typeof(HazardMover), typeof(ObstacleBehaviour));
+                typeof(HazardMover), typeof(ObstacleBehaviour), typeof(ZapperShape));
 
             BuildPrefab("Rocket", "Rocket", "Hazards", "Hazard",
                 go => go.AddComponent<BoxCollider2D>(),
@@ -66,6 +66,68 @@ namespace JetpackRide.EditorTools
             RegisterPoolEntry("rocketWarning", $"{PrefabDir}/RocketWarning.prefab", 3, 10);
             AssetDatabase.SaveAssets();
             Debug.Log("[PrefabBuilder] RocketWarning prefab built and pool entry registered.");
+        }
+
+        // 9-slices the four zapper frames (orb end caps as borders) and turns Obstacle_Zapper into a
+        // sliced, resizable, flickering beam driven by ZapperShape. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildZapperVariants
+        [MenuItem("Jetpack Ride/Build Zapper Variants")]
+        public static void BuildZapperVariants()
+        {
+            var frames = new Sprite[ZapperFrameCount];
+            for (int i = 0; i < ZapperFrameCount; i++)
+            {
+                SliceZapperSprite($"{SpriteDir}/Zapper{i + 1}.png");
+                frames[i] = LoadSprite($"Zapper{i + 1}");
+            }
+
+            var path = $"{PrefabDir}/Obstacle_Zapper.prefab";
+            var zapper = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var renderer = zapper.GetComponent<SpriteRenderer>();
+                renderer.sprite = frames[0];
+                renderer.drawMode = SpriteDrawMode.Sliced;
+                renderer.size = frames[0].bounds.size;
+
+                if (!zapper.TryGetComponent<ZapperShape>(out var shape)) shape = zapper.AddComponent<ZapperShape>();
+                var so = new SerializedObject(shape);
+                var framesProp = so.FindProperty("frames");
+                framesProp.arraySize = frames.Length;
+                for (int i = 0; i < frames.Length; i++) framesProp.GetArrayElementAtIndex(i).objectReferenceValue = frames[i];
+                so.ApplyModifiedPropertiesWithoutUndo();
+
+                PrefabUtility.SaveAsPrefabAsset(zapper, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(zapper);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Zapper sprites 9-sliced and Obstacle_Zapper updated.");
+        }
+
+        private const int ZapperFrameCount = 4;
+        // Orb caps are the top/bottom ~32px of the 46x~110 sprite; only the bolt between stretches.
+        private const float ZapperCapPixels = 32f;
+
+        private static void SliceZapperSprite(string path)
+        {
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect; // required for sliced drawing
+            importer.SetTextureSettings(settings);
+
+            var factory = new UnityEditor.U2D.Sprites.SpriteDataProviderFactories();
+            factory.Init();
+            var provider = factory.GetSpriteEditorDataProviderFromObject(importer);
+            provider.InitSpriteEditorDataProvider();
+            var rects = provider.GetSpriteRects();
+            foreach (var rect in rects) rect.border = new Vector4(0f, ZapperCapPixels, 0f, ZapperCapPixels);
+            provider.SetSpriteRects(rects);
+            provider.Apply();
+            importer.SaveAndReimport();
         }
 
         // Particle FX (GDD §8.2). Not pooled: one-shots destroy themselves via StopAction.Destroy.
@@ -313,6 +375,84 @@ namespace JetpackRide.EditorTools
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("[PrefabBuilder] Death animation, coin scale and spark position wired.");
+        }
+
+        // Moves the Player's sprite onto a child "Visual" (so run/tilt/tumble rotate the sprite, never
+        // the collider), adds PlayerVisuals, and imports + assigns the run cycle from
+        // Art/Sprites/PlayerRun/PlayerRun_<n>.png (sliced from Source/sprites/character-running-frames.png).
+        // Idempotent. Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
+        [MenuItem("Jetpack Ride/Wire Player Visuals")]
+        public static void WirePlayerVisuals()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
+                ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
+
+            var visualTransform = player.transform.Find("Visual");
+            if (visualTransform == null)
+            {
+                visualTransform = new GameObject("Visual").transform;
+                visualTransform.SetParent(player.transform, false);
+                visualTransform.SetAsFirstSibling();
+            }
+            // TryGetComponent, not GetComponent + ??: a missing component is a Unity fake-null in the editor.
+            if (!visualTransform.TryGetComponent<SpriteRenderer>(out var visualRenderer))
+                visualRenderer = visualTransform.gameObject.AddComponent<SpriteRenderer>();
+            if (player.TryGetComponent<SpriteRenderer>(out var rootRenderer))
+            {
+                EditorUtility.CopySerialized(rootRenderer, visualRenderer);
+                UnityEngine.Object.DestroyImmediate(rootRenderer);
+            }
+
+            if (player.TryGetComponent<JetpackRide.Player.PlayerDeathAnimator>(out var deathAnimator))
+            {
+                var deathSo = new SerializedObject(deathAnimator);
+                deathSo.FindProperty("target").objectReferenceValue = visualRenderer;
+                deathSo.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            if (!player.TryGetComponent<JetpackRide.Player.PlayerVisuals>(out var visuals))
+                visuals = player.gameObject.AddComponent<JetpackRide.Player.PlayerVisuals>();
+            var so = new SerializedObject(visuals);
+            so.FindProperty("controller").objectReferenceValue = player;
+            so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
+            so.FindProperty("target").objectReferenceValue = visualRenderer;
+            var runFrames = ImportRunFrames();
+            var framesProp = so.FindProperty("runFrames");
+            framesProp.arraySize = runFrames.Length;
+            for (int i = 0; i < runFrames.Length; i++) framesProp.GetArrayElementAtIndex(i).objectReferenceValue = runFrames[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[PrefabBuilder] PlayerVisuals wired ({runFrames.Length} run frames).");
+        }
+
+        private const string RunFrameDir = SpriteDir + "/PlayerRun";
+
+        // Imports PlayerRun_0..n with the same settings as PlayerFly (PPU 100, bilinear, no mips,
+        // uncompressed, centre pivot) and returns them in frame order.
+        private static Sprite[] ImportRunFrames()
+        {
+            var frames = new System.Collections.Generic.List<Sprite>();
+            for (int i = 0; ; i++)
+            {
+                var path = $"{RunFrameDir}/PlayerRun_{i}.png";
+                if (AssetImporter.GetAtPath(path) is not TextureImporter importer) break;
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 100f;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                settings.spriteAlignment = (int)SpriteAlignment.Center;
+                importer.SetTextureSettings(settings);
+                importer.SaveAndReimport();
+                frames.Add(AssetDatabase.LoadAssetAtPath<Sprite>(path));
+            }
+            return frames.ToArray();
         }
 
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.

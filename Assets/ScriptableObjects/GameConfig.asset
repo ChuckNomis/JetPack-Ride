@@ -17,6 +17,7 @@ MonoBehaviour:
   maxScrollSpeed: 26
   jetpackThrust: 80
   gravityScale: 4
+  zapperSpeedMultiplier: 1
   baseObstacleSpawnInterval: 1.8
   minObstacleSpawnInterval: 0.6
   baseRocketSpawnInterval: 4
