@@ -15,6 +15,8 @@ namespace JetpackRide.EditorTools
         private const string PrefabDir = "Assets/Prefabs";
         private const string SpriteDir = "Assets/Art/Sprites";
         private const string MainScenePath = "Assets/Scenes/MainGame.unity";
+        // Jetpack nozzle, just behind/below the character (player local space, player scale 2).
+        private static readonly Vector3 SparkLocalPosition = new(-0.08f, -0.3f, 0f);
 
         // GDD §7 back-to-front order.
         private static readonly string[] SortingLayers = { "Background", "Decals", "Hazards", "Player", "ForegroundUI" };
@@ -133,7 +135,7 @@ namespace JetpackRide.EditorTools
             if (existing != null) UnityEngine.Object.DestroyImmediate(existing.gameObject);
 
             var spark = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(sparkPath), player.transform);
-            spark.transform.localPosition = new Vector3(-0.2f, -0.3f, 0f); // jetpack nozzle, behind/below the character
+            spark.transform.localPosition = SparkLocalPosition;
 
             var playerSo = new SerializedObject(player);
             playerSo.FindProperty("jetpackSpark").objectReferenceValue = spark.GetComponent<ParticleSystem>();
@@ -274,6 +276,43 @@ namespace JetpackRide.EditorTools
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("[PrefabBuilder] Audio wired; build settings set to MainGame.");
+        }
+
+        // Death animation on the Player, coin prefab sized to read at game scale (13px sprite),
+        // and the spark nozzle position. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerAndCoins
+        [MenuItem("Jetpack Ride/Wire Death Animation And Coins")]
+        public static void WirePlayerAndCoins()
+        {
+            var coinPath = $"{PrefabDir}/Coin.prefab";
+            var coin = PrefabUtility.LoadPrefabContents(coinPath);
+            try
+            {
+                coin.transform.localScale = new Vector3(4f, 4f, 1f);
+                PrefabUtility.SaveAsPrefabAsset(coin, coinPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(coin);
+            }
+
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
+                ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
+
+            var animator = player.GetComponent<JetpackRide.Player.PlayerDeathAnimator>()
+                ?? player.gameObject.AddComponent<JetpackRide.Player.PlayerDeathAnimator>();
+            var so = new SerializedObject(animator);
+            so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
+            so.FindProperty("deadSprite").objectReferenceValue = LoadSprite("PlayerDead");
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var spark = player.transform.Find("FX_JetpackSpark");
+            if (spark != null) spark.localPosition = SparkLocalPosition;
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Death animation, coin scale and spark position wired.");
         }
 
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.

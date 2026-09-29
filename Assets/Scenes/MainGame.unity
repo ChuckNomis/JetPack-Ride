@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 96190704}
   - component: {fileID: 96190703}
   - component: {fileID: 96190702}
+  - component: {fileID: 96190708}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -309,6 +310,23 @@ Transform:
   - {fileID: 689568344}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &96190708
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96190701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bb6edfaada70824a8b673f9d98ecdf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Player.PlayerDeathAnimator
+  gameManager: {fileID: 1960459901}
+  deadSprite: {fileID: -5028009318970784729, guid: 75a1d2b6dea25974ca3f622dc3eb2c11, type: 3}
+  hopSpeed: 6
+  tumbleSeconds: 0.6
+  tumbleDegrees: 360
 --- !u!1 &147820121
 GameObject:
   m_ObjectHideFlags: 0
@@ -1097,7 +1115,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3872878989018070088, guid: a27d35e9736183941866abbac929c755, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.2
+      value: -0.08
       objectReference: {fileID: 0}
     - target: {fileID: 3872878989018070088, guid: a27d35e9736183941866abbac929c755, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2110,6 +2128,10 @@ MonoBehaviour:
   despawnX: -14
   warningLeadSeconds: 0.5
   warningX: 8.5
+  coinSpawnIntervalRange: {x: 2.5, y: 4}
+  coinChainChance: 0.6
+  coinSpacing: 0.8
+  coinArcHeight: 1.2
 --- !u!4 &1478857592
 Transform:
   m_ObjectHideFlags: 0
