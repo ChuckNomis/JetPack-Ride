@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 96190703}
   - component: {fileID: 96190702}
   - component: {fileID: 96190708}
+  - component: {fileID: 96190709}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -327,6 +328,26 @@ MonoBehaviour:
   hopSpeed: 6
   tumbleSeconds: 0.6
   tumbleDegrees: 360
+--- !u!114 &96190709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96190701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0c293359c74436479519534ed6f9e41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Player.PlayerVisuals
+  controller: {fileID: 96190703}
+  gameManager: {fileID: 1960459901}
+  target: {fileID: 96190706}
+  runFrames: []
+  runFps: 12
+  floorEpsilon: 0.05
+  fallbackBobHeight: 0.04
+  fallbackBobHz: 6
 --- !u!1 &147820121
 GameObject:
   m_ObjectHideFlags: 0
@@ -2128,10 +2149,20 @@ MonoBehaviour:
   despawnX: -14
   warningLeadSeconds: 0.5
   warningX: 8.5
+  rocketPairsFromMeters: 250
+  rocketTriplesFromMeters: 500
   coinSpawnIntervalRange: {x: 2.5, y: 4}
-  coinChainChance: 0.6
   coinSpacing: 0.8
   coinArcHeight: 1.2
+  zapperLengths:
+  - 2.4
+  - 3.3
+  - 4.4
+  zapperThickness: 0.85
+  zapperClusterGap: 1
+  coinRadius: 0.3
+  coinPlacementAttempts: 6
+  zapperShiftAttempts: 6
 --- !u!4 &1478857592
 Transform:
   m_ObjectHideFlags: 0

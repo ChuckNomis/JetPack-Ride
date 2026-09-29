@@ -377,6 +377,27 @@ namespace JetpackRide.EditorTools
             Debug.Log("[PrefabBuilder] Death animation, coin scale and spark position wired.");
         }
 
+        // Adds PlayerVisuals (run cycle; frames assigned once run art exists) to the Player. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
+        [MenuItem("Jetpack Ride/Wire Player Visuals")]
+        public static void WirePlayerVisuals()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
+                ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
+
+            var visuals = player.GetComponent<JetpackRide.Player.PlayerVisuals>()
+                ?? player.gameObject.AddComponent<JetpackRide.Player.PlayerVisuals>();
+            var so = new SerializedObject(visuals);
+            so.FindProperty("controller").objectReferenceValue = player;
+            so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
+            so.FindProperty("target").objectReferenceValue = player.GetComponentInChildren<SpriteRenderer>();
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            Debug.Log("[PrefabBuilder] PlayerVisuals wired.");
+        }
+
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.
         private static void RegisterPoolEntry(string id, string prefabPath, int defaultCapacity, int maxSize)
         {
