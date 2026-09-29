@@ -87,6 +87,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and can optionally home in on the player.
 * Zapper speed is independently tunable (`GameConfig.ZapperSpeedMultiplier`; `1.0` = locked to the background).
 * Vertical, horizontal, and ±45° diagonal zappers in three lengths (9-sliced sprite, 4-frame flicker); only vertical early on, and a cluster always leaves a flyable lane (`ZapperLayout`).
+* Coins and zappers keep at least 1 unit apart for as long as both are on screen, even when zappers drift (`SpawnSafety`); coins re-roll their height or skip, zappers shift or evict the coins in their way.
 * Coin collection feeding into score, alongside distance.
 * Persisted high score (`PlayerPrefs`) shown on the title screen and Game Over panel.
 * Full run reset on restart — no leftover hazards from the previous run.
@@ -102,7 +103,6 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * `MainGame.unity` layout (sizing, HUD placement) is still being iterated on — not yet considered final.
 
 **Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), in progress):
-* Safety distance so coins and zappers never overlap or spawn touching.
 * Rocket lock-on: the warning tracks the player's height for 1–2s, locks, then the rocket flies straight (replaces in-flight homing).
 * Running animation on the floor (asset source still being decided).
 * Forward body tilt while free-falling.

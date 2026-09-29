@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using JetpackRide.Core;
@@ -15,6 +16,8 @@ namespace JetpackRide.Spawning
         // Free vertical stretch a zapper cluster must leave: player diameter (0.67) plus a margin.
         public const float MinZapperLane = 1.3f;
         public const float MinRocketPairGap = 3f;
+        // Minimum distance kept between any coin and any zapper for as long as both are on screen.
+        public const float CoinZapperClearance = 1f;
 
         [SerializeField] private GameManager gameManager;
         [SerializeField] private ObjectPoolManager pool;
@@ -35,12 +38,38 @@ namespace JetpackRide.Spawning
         [Tooltip("Collider thickness used for layout; must be >= the prefab's real beam thickness.")]
         [SerializeField] private float zapperThickness = 0.85f;
         [SerializeField] private float zapperClusterGap = 1f;
+        [SerializeField] private float coinRadius = 0.3f;
+        [Tooltip("Base-Y candidates tried for a coin batch before skipping it (it would touch a zapper).")]
+        [SerializeField] private int coinPlacementAttempts = 6;
+        [Tooltip("Vertical shifts tried for a zapper cluster before it evicts the coins in its way.")]
+        [SerializeField] private int zapperShiftAttempts = 6;
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastSpawnedRocketWasHoming { get; private set; }
         public event System.Action RocketSpawned;
 
         private CancellationTokenSource cts;
+
+        // ObjectPoolManager has no active-object query, so live coins/zappers are tracked here and
+        // pruned (once despawned) at the start of every spawn.
+        private struct Tracked
+        {
+            public HazardMover Mover;
+            public Vector2 HalfExtents;
+            public float Speed;
+
+            public Rect Bounds
+            {
+                get
+                {
+                    Vector2 c = Mover.transform.position;
+                    return new Rect(c - HalfExtents, 2f * HalfExtents);
+                }
+            }
+        }
+
+        private readonly List<Tracked> liveZappers = new();
+        private readonly List<Tracked> liveCoins = new();
 
         // GameManager wiring lives in Start/OnDestroy, not OnEnable/OnDisable, so serialized
         // (or test-injected) references are guaranteed to be assigned before they're read.
@@ -153,26 +182,57 @@ namespace JetpackRide.Spawning
         }
 
         // Coins only come in batches (CoinPatterns); bigger and more varied shapes later in a run.
+        // A batch is placed clear of every live zapper (CoinZapperClearance, including drift); if no
+        // candidate height works it is skipped. Returns the number of coins spawned.
         internal int SpawnCoinsNow()
         {
+            PruneTracked();
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             var pattern = CoinPatterns.Pick(snapshot.RampProgress01, Random.value, coinSpacing, coinArcHeight);
+            float speed = snapshot.ScrollSpeed;
+            float x = spawnPoint.position.x;
 
             // Keep the whole pattern inside the play band.
             float maxBaseY = spawnYRange.y - pattern.Bounds.height;
-            float baseY = maxBaseY < spawnYRange.x
-                ? (spawnYRange.x + spawnYRange.y - pattern.Bounds.height) * 0.5f
-                : Random.Range(spawnYRange.x, maxBaseY);
+            float? baseY = null;
+            for (int attempt = 0; attempt < coinPlacementAttempts && baseY == null; attempt++)
+            {
+                float candidate = maxBaseY < spawnYRange.x
+                    ? (spawnYRange.x + spawnYRange.y - pattern.Bounds.height) * 0.5f
+                    : Random.Range(spawnYRange.x, maxBaseY);
+                var rect = new Rect(x - coinRadius, candidate - coinRadius,
+                    pattern.Bounds.width + 2f * coinRadius, pattern.Bounds.height + 2f * coinRadius);
+                if (!ConflictsWith(liveZappers, rect, speed)) baseY = candidate;
+            }
+            if (baseY == null) return 0;
+
             foreach (var offset in pattern.Offsets)
             {
-                var pos = new Vector3(spawnPoint.position.x + offset.x, baseY + offset.y, 0f);
+                var pos = new Vector3(x + offset.x, baseY.Value + offset.y, 0f);
                 var instance = pool.Spawn(CoinPoolId, pos, Quaternion.identity);
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {
-                    mover.Configure(pool, CoinPoolId, snapshot.ScrollSpeed, despawnX);
+                    mover.Configure(pool, CoinPoolId, speed, despawnX);
+                    liveCoins.Add(new Tracked { Mover = mover, HalfExtents = new Vector2(coinRadius, coinRadius), Speed = speed });
                 }
             }
             return pattern.Offsets.Length;
+        }
+
+        private void PruneTracked()
+        {
+            static bool Gone(Tracked t) => t.Mover == null || t.Mover.HasDespawned || !t.Mover.gameObject.activeInHierarchy;
+            liveZappers.RemoveAll(Gone);
+            liveCoins.RemoveAll(Gone);
+        }
+
+        private bool ConflictsWith(List<Tracked> others, Rect rect, float speed)
+        {
+            foreach (var other in others)
+            {
+                if (SpawnSafety.WillOverlap(rect, speed, other.Bounds, other.Speed, CoinZapperClearance, despawnX)) return true;
+            }
+            return false;
         }
 
         // GDD §3 "Pattern mixing": past the threshold, one spawn window yields a pair of obstacles.
@@ -184,25 +244,82 @@ namespace JetpackRide.Spawning
 
         internal void SpawnObstacleNow()
         {
+            PruneTracked();
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             int clusterSize = DetermineObstacleClusterSize(snapshot.RampProgress01);
+            float speed = snapshot.ScrollSpeed * config.ZapperSpeedMultiplier;
 
             // The layout keeps every beam inside the band and the cluster's combined vertical span
             // leaves at least MinZapperLane free, so there is always a lane through the whole cluster.
             var cluster = ZapperLayout.PlanCluster(clusterSize, snapshot.RampProgress01, spawnYRange,
                 zapperThickness, zapperLengths, MinZapperLane, zapperClusterGap, () => Random.value);
-            foreach (var zapper in cluster)
+            var extents = new Vector2[cluster.Length];
+            for (int i = 0; i < cluster.Length; i++)
+                extents[i] = ZapperLayout.WorldExtents(cluster[i].Orientation, cluster[i].Length, zapperThickness);
+
+            // Coins must never touch zappers. First try shifting the whole cluster vertically (only
+            // to heights that keep the lane); if nothing is clear, hazards win and the coins in the
+            // way are removed, so difficulty never drops because of coins.
+            float dy = 0f;
+            bool clear = ClusterClearOfCoins(cluster, extents, 0f, speed);
+            if (!clear)
             {
-                var pos = new Vector3(spawnPoint.position.x + zapper.Center.x, zapper.Center.y, 0f);
+                float minLo = float.MaxValue, maxHi = float.MinValue;
+                for (int i = 0; i < cluster.Length; i++)
+                {
+                    minLo = Mathf.Min(minLo, cluster[i].Center.y - extents[i].y);
+                    maxHi = Mathf.Max(maxHi, cluster[i].Center.y + extents[i].y);
+                }
+                var spans = new List<Vector2>(cluster.Length);
+                for (int attempt = 0; attempt < zapperShiftAttempts && !clear; attempt++)
+                {
+                    float candidate = Random.Range(spawnYRange.x - minLo, spawnYRange.y - maxHi);
+                    spans.Clear();
+                    for (int i = 0; i < cluster.Length; i++)
+                        spans.Add(new Vector2(cluster[i].Center.y + candidate - extents[i].y, cluster[i].Center.y + candidate + extents[i].y));
+                    if (ZapperLayout.LargestGap(spans, spawnYRange) < MinZapperLane) continue;
+                    if (ClusterClearOfCoins(cluster, extents, candidate, speed)) { dy = candidate; clear = true; }
+                }
+            }
+
+            for (int i = 0; i < cluster.Length; i++)
+            {
+                var zapper = cluster[i];
+                var pos = new Vector3(spawnPoint.position.x + zapper.Center.x, zapper.Center.y + dy, 0f);
                 var rotation = Quaternion.Euler(0f, 0f, ZapperLayout.AngleDegrees(zapper.Orientation));
                 var instance = pool.Spawn(ObstaclePoolId, pos, rotation);
                 if (instance.TryGetComponent<ZapperShape>(out var shape)) shape.Configure(zapper.Orientation, zapper.Length);
                 else instance.transform.rotation = rotation;
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {
-                    mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed * config.ZapperSpeedMultiplier, despawnX);
+                    mover.Configure(pool, ObstaclePoolId, speed, despawnX);
+                    var tracked = new Tracked { Mover = mover, HalfExtents = extents[i], Speed = speed };
+                    liveZappers.Add(tracked);
+                    if (!clear) EvictCoinsNear(tracked);
                 }
                 ActiveObstacleCount++;
+            }
+        }
+
+        private bool ClusterClearOfCoins(ZapperPlacement[] cluster, Vector2[] extents, float dy, float speed)
+        {
+            for (int i = 0; i < cluster.Length; i++)
+            {
+                var center = new Vector2(spawnPoint.position.x + cluster[i].Center.x, cluster[i].Center.y + dy);
+                if (ConflictsWith(liveCoins, new Rect(center - extents[i], 2f * extents[i]), speed)) return false;
+            }
+            return true;
+        }
+
+        private void EvictCoinsNear(Tracked zapper)
+        {
+            var bounds = zapper.Bounds;
+            for (int i = liveCoins.Count - 1; i >= 0; i--)
+            {
+                var coin = liveCoins[i];
+                if (!SpawnSafety.WillOverlap(bounds, zapper.Speed, coin.Bounds, coin.Speed, CoinZapperClearance, despawnX)) continue;
+                coin.Mover.Despawn();
+                liveCoins.RemoveAt(i);
             }
         }
 

@@ -239,6 +239,49 @@ public class SpawnManagerTests
         }
     }
 
+    [UnityTest]
+    public IEnumerator CoinsAndZappers_ForcedOverlappingSpawns_KeepClearance([Values(0.7f, 1f, 1.3f)] float zapperMultiplier)
+    {
+        var (spawner, manager, pool) = Build();
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        typeof(GameConfig).GetField("zapperSpeedMultiplier", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(config, zapperMultiplier);
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(5000f);
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        float coinRadius = (float)typeof(SpawnManager).GetField("coinRadius", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        int trialsWithBoth = 0;
+        for (int trial = 0; trial < 60; trial++)
+        {
+            pool.DespawnAll();
+            // Both spawn at the same spawn point, so overlaps are forced unless the spawner avoids them.
+            if (trial % 2 == 0) { spawner.SpawnCoinsNow(); spawner.SpawnObstacleNow(); }
+            else { spawner.SpawnObstacleNow(); spawner.SpawnCoinsNow(); }
+            Physics2D.SyncTransforms();
+
+            var coins = new System.Collections.Generic.List<(Rect rect, float speed)>();
+            var zappers = new System.Collections.Generic.List<(Rect rect, float speed)>();
+            foreach (Transform child in pool.transform)
+            {
+                if (!child.gameObject.activeSelf) continue;
+                var mover = child.GetComponent<JetpackRide.Hazards.HazardMover>();
+                float speed = (float)speedField.GetValue(mover);
+                if (child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null)
+                    coins.Add((new Rect(child.position.x - coinRadius, child.position.y - coinRadius, 2 * coinRadius, 2 * coinRadius), speed));
+                else if (child.TryGetComponent<BoxCollider2D>(out var box))
+                    zappers.Add((new Rect(box.bounds.min, box.bounds.size), speed));
+            }
+            Assert.Greater(zappers.Count, 0, "hazards always spawn");
+            if (coins.Count > 0) trialsWithBoth++;
+            foreach (var c in coins)
+                foreach (var z in zappers)
+                    Assert.IsFalse(SpawnSafety.WillOverlap(c.rect, c.speed, z.rect, z.speed, SpawnManager.CoinZapperClearance - 1e-3f, -14f),
+                        $"trial {trial}: coin {c.rect} vs zapper {z.rect}");
+        }
+        Assert.Greater(trialsWithBoth, 10, "coins still spawn alongside zappers most of the time");
+    }
+
     [Test]
     public void DetermineRocketVolleySize_ByDistance()
     {
