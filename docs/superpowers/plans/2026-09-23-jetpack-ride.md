@@ -2435,35 +2435,41 @@ git commit -m "feat: add RunResetService to fully clear pooled hazards on restar
 **Interfaces:**
 - Produces: the playable scene wiring every prior script together. No new code — pure editor assembly.
 
-- [ ] **Step 1: Create the scene**
+- [x] **Step 1: Create the scene**
 
 `Assets/Scenes/` → right-click → Create → Scene → name `MainGame`. Open it. Delete the default sample objects left by the URP 2D template if any (keep Main Camera).
 
-- [ ] **Step 2: Set up the camera**
+- [x] **Step 2: Set up the camera**
 
 Select Main Camera: Projection Orthographic, Size tuned so the 1920×1080 reference frame fills view (Size 5.4 for a 16:9 view at PPU 100 with a ~10.8 unit-tall vertical play area). Add `URP 2D Renderer` asset if not already assigned in URP asset settings (should be default from the 2D URP template).
 
-- [ ] **Step 3: Add config and manager objects**
+- [x] **Step 3: Add config and manager objects**
 
 Create empty GameObjects: `GameManager` (add `GameManager` component, assign `GameConfig` asset), `ObjectPoolManager` (add component; leave `Pool Entries` empty for now, fill in Step 6), `SpawnManager` (add component), `RunResetService` (add component), `UIManager` (add component, wired in Step 8).
 
-- [ ] **Step 4: Add the player**
+> **Note (done 2026-09-29):** A 6th manager object was needed that the plan doesn't mention: `DistanceTracker`. Found during Step 11 (see below) that nothing anywhere calls `GameManager.AddDistance()` at runtime — it's only ever called from tests. Without it, distance/score text never changes and `DifficultyEvaluator`-driven speed/spawn ramps stay pinned at their base values forever. Added `Assets/Scripts/Core/DistanceTracker.cs` (TDD'd like every other component: `Assets/Tests/PlayMode/DistanceTrackerTests.cs`, `internal void Tick(float deltaTime)` test seam, `PlayMode` suite 38/38 after) and wired a `DistanceTracker` GameObject into the scene (Game Manager + Config fields) alongside the other 5 managers.
+
+- [x] **Step 4: Add the player**
 
 Create GameObject `Player` at `(-6, 0, 0)`: `SpriteRenderer` (sprite `PlayerFly`, sorting layer `Player`), `Rigidbody2D` (Body Type Dynamic, Gravity Scale set at runtime by `PlayerController`, Constraints: Freeze Rotation Z, Freeze Position X), `CircleCollider2D` or `BoxCollider2D` (Is Trigger: true, matches sprite), `PlayerController` component (assign `GameConfig`, `GameManager`; set `MinY`/`MaxY` to roughly `-4.8`/`4.8`). Add `RestartController` component to the same or a separate `InputRoot` object (assign `GameManager`).
 
-- [ ] **Step 5: Wire `SpawnManager` references**
+- [x] **Step 5: Wire `SpawnManager` references**
 
 Select `SpawnManager`: assign `GameManager`, `ObjectPoolManager`, `GameConfig`, a `SpawnPoint` empty child object positioned at `(12, 0, 0)`, and `Player` transform (for rocket homing target).
 
-- [ ] **Step 6: Fill `ObjectPoolManager` pool entries**
+- [x] **Step 6: Fill `ObjectPoolManager` pool entries**
 
 Select `ObjectPoolManager`: add 3 Pool Entries — `id: "obstacle"`, prefab `Obstacle_Zapper`, capacity 6, max 20; `id: "rocket"`, prefab `Rocket`, capacity 4, max 15; `id: "coin"`, prefab `Coin`, capacity 10, max 40. Assign the same `ObjectPoolManager` reference to `RunResetService`.
 
-- [ ] **Step 7: Add background parallax layers**
+- [x] **Step 7: Add background parallax layers**
 
 Create 2 GameObjects per background art layer (e.g. `Background_Far`, `Background_Near`) using `BackdropMain` sprite tiled twice side by side (each pair forming one seamless loop), sorting layer `Background`, add `ParallaxLayer` component (assign `GameManager`, `ScrollSpeedMultiplier` 0.3 for far / 1.0 for near, `TileWidth` = sprite width in world units).
 
-- [ ] **Step 8: Build the UI canvas**
+> **Note (done 2026-09-29):** `BackdropMain` imports at 7.68×3.6 world units (768×360px ÷ PPU 100) — too small to cover the camera's ~10.8-unit-tall / ~19.2-unit-wide view at Orthographic Size 5.4. All 4 tiles (`Background_Far_1/2`, `Background_Near_1/2`) were scaled 3× (transform scale `(3,3,3)`), and `TileWidth` set to `7.68 × 3 = 23.04` to match, with the `_2` tile of each pair positioned at `x = 23.04` so the pair sits edge-to-edge. **Bug found during Step 11 playtest and fixed directly in the scene file:** `Background_Far_1` and `Background_Near_1` were left at their pre-scale `x = 1.9` instead of `x = 0`, leaving a ~1.9-unit gap in the loop that exposed the camera's default clear color ("default blue" the user saw). Corrected both to `x = 0` by editing `Assets/Scenes/MainGame.unity` directly (simple numeric `m_LocalPosition` fix, verified safe via a clean batchmode reload afterward) rather than round-tripping through the Editor.
+>
+> Also worth noting for future contributors: Far and Near use the *same* `BackdropMain` art at different `ScrollSpeedMultiplier`s (0.3 / 1.0) — they're expected to look identical, with only relative scroll speed producing the depth illusion. That's a limitation of having a single backdrop asset, not a bug.
+
+- [x] **Step 8: Build the UI canvas**
 
 Create `Canvas` (Render Mode: Screen Space – Camera, assign Main Camera, `CanvasScaler`: Scale With Screen Size, Reference Resolution 1920×1080, Match Width/Height 0.5). Under it:
 - `TitlePanel`: logo image (`Logo` sprite), `TitleHighScoreText` (TMP), "Press Space / Tap to Jetpack" TMP text.
@@ -2472,18 +2478,24 @@ Create `Canvas` (Render Mode: Screen Space – Camera, assign Main Camera, `Canv
 
 Select `UIManager` GameObject and assign all panel/text references from these hierarchy objects.
 
-- [ ] **Step 9: Set sorting layers**
+> **Note (done 2026-09-29):** First TMP text created in the project prompted "Import TMP Essentials" — accepted, which added `Assets/TextMesh Pro/` (fonts, shaders, default settings) to the repo; committed alongside the scene since it's a runtime dependency of every TMP text object. Verified via scene-file inspection that every `UIManager` field (`gameManager`, all 3 panels, all 6 `TMP_Text` fields) resolves to a real, correctly-typed object — none were left unassigned.
+
+- [x] **Step 9: Set sorting layers**
 
 (Already done 2026-09-27 by `PrefabBuilder` in Task 4.3 — verify only.) Edit → Project Settings → Tags and Layers → Sorting Layers: create, in order, `Background`, `Decals`, `Hazards`, `Player`, `ForegroundUI`. Assign each `SpriteRenderer` created above to its matching layer; assign Canvas's Sort Layer to `ForegroundUI`.
 
-- [ ] **Step 10: Smoke test in batch mode**
+- [x] **Step 10: Smoke test in batch mode**
 
 Run: `"$UNITY_EXE" -batchmode -quit -projectPath "$PROJECT_PATH" -logFile -`
 Expected: exit code 0, no missing-reference or compile errors in the log.
 
-- [ ] **Step 11: Manual playtest**
+Verified clean (exit 0, no errors) both before and after the Step 7/Step 3 fixes above.
+
+- [x] **Step 11: Manual playtest**
 
 Open the project in the Unity Editor, open `MainGame.unity`, press Play. Verify: title screen shows, Space begins the run, holding Space lifts the player, releasing lets it fall, hazards/rockets/coins scroll in from the right and despawn off the left, colliding with a hazard ends the run and shows the Game Over panel with correct distance/coins, mashing Space immediately after death does nothing for ~1s, pressing Space after the lockout returns to Get Ready, pressing again starts a fresh run with no leftover hazards on screen.
+
+**First pass (2026-09-29) found 3 issues, all addressed above:** (1) HUD/final-stat text never updated — root cause was the missing `AddDistance()` caller, fixed by `DistanceTracker`. (2) Parallax backgrounds showed gaps/the camera's default blue — root cause was the `Background_Far_1`/`Near_1` position bug, fixed. (3) Hazard speed felt off relative to the background — expected to resolve once distance-driven scroll speed is actually ticking; re-verify on the next playtest pass. **Re-playtest pending** — not yet re-confirmed clean after the fixes.
 
 - [ ] **Step 12: Commit**
 
@@ -2491,6 +2503,8 @@ Open the project in the Unity Editor, open `MainGame.unity`, press Play. Verify:
 git add Assets/Scenes/MainGame.unity Assets/Scenes/MainGame.unity.meta ProjectSettings/TagManager.asset
 git commit -m "feat: assemble MainGame scene wiring GameManager, pooling, spawning, player, and UI"
 ```
+
+> **Note (done 2026-09-29):** Committed in 2 pieces rather than 1: `0574704` (`DistanceTracker` + tests, the code fix) and `38d9786` (scene assembly + TMP Essentials import + background-position fix, matching this step's file list plus `Assets/TextMesh Pro/`). Committed once Step 10 was clean, ahead of Step 11's re-confirmation, consistent with this project's established commit-as-verified rhythm — Step 11 will be re-run against this same committed state.
 
 ---
 
