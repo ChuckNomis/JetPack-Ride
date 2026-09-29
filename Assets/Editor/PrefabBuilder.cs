@@ -66,6 +66,175 @@ namespace JetpackRide.EditorTools
             Debug.Log("[PrefabBuilder] RocketWarning prefab built and pool entry registered.");
         }
 
+        // Particle FX (GDD §8.2). Not pooled: one-shots destroy themselves via StopAction.Destroy.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildFx
+        [MenuItem("Jetpack Ride/Build Particle FX")]
+        public static void BuildFx()
+        {
+            var material = EnsureParticleMaterial();
+
+            var sparkPath = BuildParticlePrefab("FX_JetpackSpark", material, "Player", ps =>
+            {
+                var main = ps.main;
+                main.loop = true;
+                main.playOnAwake = false;
+                main.simulationSpace = ParticleSystemSimulationSpace.Local;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.35f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 5f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.14f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.95f, 0.4f), new Color(1f, 0.5f, 0.1f));
+                main.gravityModifier = 0.5f;
+                var emission = ps.emission;
+                emission.rateOverTime = 70f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 15f;
+                shape.radius = 0.05f;
+                shape.rotation = new Vector3(90f, 0f, 0f); // cone faces -Y: sparks shoot down out of the jetpack
+                FadeOut(ps, new Color(1f, 0.6f, 0.1f));
+            });
+
+            var sparklePath = BuildParticlePrefab("FX_CoinSparkle", material, "Decals", ps =>
+            {
+                ConfigureOneShot(ps, burstCount: 18, lifetime: 0.4f, speed: new ParticleSystem.MinMaxCurve(1.5f, 3.5f),
+                    size: new ParticleSystem.MinMaxCurve(0.08f, 0.18f),
+                    color: new ParticleSystem.MinMaxGradient(new Color(1f, 0.95f, 0.5f), new Color(1f, 0.8f, 0.2f)));
+                FadeOut(ps, new Color(1f, 0.85f, 0.3f));
+            });
+
+            var explosionPath = BuildParticlePrefab("FX_Explosion", material, "Player", ps =>
+            {
+                ConfigureOneShot(ps, burstCount: 45, lifetime: 0.6f, speed: new ParticleSystem.MinMaxCurve(3f, 8f),
+                    size: new ParticleSystem.MinMaxCurve(0.2f, 0.5f),
+                    color: new ParticleSystem.MinMaxGradient(new Color(1f, 0.85f, 0.3f), new Color(1f, 0.3f, 0.05f)));
+                FadeOut(ps, new Color(0.35f, 0.1f, 0.05f));
+            });
+
+            // Coin prefab: sparkle on collect.
+            var coinPath = $"{PrefabDir}/Coin.prefab";
+            var coin = PrefabUtility.LoadPrefabContents(coinPath);
+            try
+            {
+                var so = new SerializedObject(coin.GetComponent<CoinBehaviour>());
+                so.FindProperty("sparklePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(sparklePath);
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(coin, coinPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(coin);
+            }
+
+            // Player in MainGame: spark child + explosion reference.
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
+                ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
+            var existing = player.transform.Find("FX_JetpackSpark");
+            if (existing != null) UnityEngine.Object.DestroyImmediate(existing.gameObject);
+
+            var spark = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(sparkPath), player.transform);
+            spark.transform.localPosition = new Vector3(-0.2f, -0.3f, 0f); // jetpack nozzle, behind/below the character
+
+            var playerSo = new SerializedObject(player);
+            playerSo.FindProperty("jetpackSpark").objectReferenceValue = spark.GetComponent<ParticleSystem>();
+            playerSo.FindProperty("explosionPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(explosionPath);
+            playerSo.ApplyModifiedPropertiesWithoutUndo();
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Particle FX built and wired.");
+        }
+
+        private static string BuildParticlePrefab(string prefabName, Material material, string sortingLayer, Action<ParticleSystem> configure)
+        {
+            var go = new GameObject(prefabName);
+            try
+            {
+                var ps = go.AddComponent<ParticleSystem>();
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                configure(ps);
+                var renderer = go.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.sortingLayerName = sortingLayer;
+                var path = $"{PrefabDir}/{prefabName}.prefab";
+                PrefabUtility.SaveAsPrefabAsset(go, path);
+                return path;
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        private static void ConfigureOneShot(ParticleSystem ps, int burstCount, float lifetime,
+            ParticleSystem.MinMaxCurve speed, ParticleSystem.MinMaxCurve size, ParticleSystem.MinMaxGradient color)
+        {
+            var main = ps.main;
+            main.loop = false;
+            main.playOnAwake = true;
+            main.duration = lifetime;
+            main.stopAction = ParticleSystemStopAction.Destroy;
+            main.startLifetime = lifetime;
+            main.startSpeed = speed;
+            main.startSize = size;
+            main.startColor = color;
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)burstCount) });
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.1f;
+        }
+
+        private static void FadeOut(ParticleSystem ps, Color endColor)
+        {
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(endColor, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.5f), new GradientAlphaKey(0f, 1f) });
+            col.color = gradient;
+        }
+
+        // Soft round dot texture + sprite-unlit material, so particles render as glowing dots under
+        // the URP 2D renderer (the default particle material isn't drawn by it).
+        private static Material EnsureParticleMaterial()
+        {
+            const string texPath = "Assets/Art/Sprites/FX_SoftDot.png";
+            const string matDir = "Assets/Art/Materials";
+            const string matPath = matDir + "/FX_Particle.mat";
+
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(texPath) == null)
+            {
+                const int n = 32;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+                for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(n / 2f, n / 2f)) / (n / 2f);
+                    float a = Mathf.Clamp01(1f - d);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+                System.IO.File.WriteAllBytes(texPath, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(texPath);
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (material == null)
+            {
+                if (!AssetDatabase.IsValidFolder(matDir)) AssetDatabase.CreateFolder("Assets/Art", "Materials");
+                var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                    ?? throw new InvalidOperationException("URP 2D Sprite-Unlit-Default shader not found");
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, matPath);
+            }
+            material.mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.
         private static void RegisterPoolEntry(string id, string prefabPath, int defaultCapacity, int maxSize)
         {

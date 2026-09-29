@@ -10,10 +10,13 @@ namespace JetpackRide.Pickups
         public bool Collected { get; private set; }
         public event Action OnCollected;
 
+        [SerializeField] private GameObject sparklePrefab;
+
         public void Collect()
         {
             if (Collected) return;
             Collected = true;
+            if (sparklePrefab != null) Instantiate(sparklePrefab, transform.position, Quaternion.identity);
             OnCollected?.Invoke();
 
             // Return to the pool rather than just deactivating, or collected coins would stay

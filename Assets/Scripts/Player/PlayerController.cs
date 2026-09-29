@@ -14,6 +14,9 @@ namespace JetpackRide.Player
         public float MinY = -3.5f;
         public float MaxY = 4.5f;
 
+        [SerializeField] private ParticleSystem jetpackSpark;
+        [SerializeField] private GameObject explosionPrefab;
+
         public event System.Action Died;
 
         private Rigidbody2D body;
@@ -59,9 +62,20 @@ namespace JetpackRide.Player
             // instead of falling out of the play area.
             ClampToPlayBounds();
 
-            if (gameManager.CurrentState != GameState.Running) return;
+            bool running = gameManager.CurrentState == GameState.Running;
+            UpdateJetpackSpark(running && pendingThrustHeld);
+            if (!running) return;
 
             ApplyThrust(pendingThrustHeld);
+        }
+
+        // Driven here rather than in ApplyThrust, which returns early outside Running and would
+        // leave sparks playing after death.
+        private void UpdateJetpackSpark(bool emitting)
+        {
+            if (jetpackSpark == null) return;
+            if (emitting && !jetpackSpark.isEmitting) jetpackSpark.Play();
+            else if (!emitting && jetpackSpark.isEmitting) jetpackSpark.Stop();
         }
 
         private void ClampToPlayBounds()
@@ -105,6 +119,7 @@ namespace JetpackRide.Player
 
             if (other.CompareTag("Hazard"))
             {
+                if (explosionPrefab != null) Instantiate(explosionPrefab, transform.position, Quaternion.identity);
                 Died?.Invoke();
                 gameManager.EndRun();
             }

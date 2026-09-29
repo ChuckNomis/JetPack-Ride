@@ -154,3 +154,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71526d6fae0851a458109ff13070ff6f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Pickups.CoinBehaviour
+  sparklePrefab: {fileID: 6525395653382606806, guid: 9612b9942cc4c234b911b5adaf8efca6, type: 3}

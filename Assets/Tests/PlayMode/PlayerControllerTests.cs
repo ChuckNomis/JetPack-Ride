@@ -148,4 +148,36 @@ public class PlayerControllerTests
         Object.DestroyImmediate(go);
         Object.DestroyImmediate(manager.gameObject);
     }
+    [UnityTest]
+    public IEnumerator JetpackSpark_EmitsWhileThrusting_StopsOnDeath()
+    {
+        var (go, controller, body, manager) = Build();
+        var spark = new GameObject("Spark").AddComponent<ParticleSystem>();
+        spark.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        spark.transform.SetParent(go.transform);
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        typeof(PlayerController).GetField("jetpackSpark", flags).SetValue(controller, spark);
+        var held = typeof(PlayerController).GetField("pendingThrustHeld", flags);
+        yield return null;
+        manager.BeginRun();
+
+        // Update re-polls real input (none, so false) every frame. Injecting after a frame's Update
+        // survives until the next frame's fixed steps; frames with no fixed step (batchmode runs
+        // uncapped, many frames per 0.02s step) just retry.
+        float deadline = Time.realtimeSinceStartup + 1f;
+        while (!spark.isEmitting && Time.realtimeSinceStartup < deadline)
+        {
+            held.SetValue(controller, true);
+            yield return null;
+        }
+        Assert.IsTrue(spark.isEmitting, "sparks should emit while thrust is held");
+
+        manager.EndRun();
+        held.SetValue(controller, true);
+        yield return new WaitForFixedUpdate();
+        Assert.IsFalse(spark.isEmitting, "sparks must stop once the run has ended, even with thrust held");
+
+        Object.DestroyImmediate(go);
+        Object.DestroyImmediate(manager.gameObject);
+    }
 }
