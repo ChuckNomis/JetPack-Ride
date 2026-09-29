@@ -2212,7 +2212,7 @@ git commit -m "feat: add UIManager driven entirely by GameManager observer event
 **Interfaces:**
 - Produces: `class ParallaxLayer : MonoBehaviour` with `float ScrollSpeedMultiplier`, `float TileWidth`, method `internal Vector3 ComputeWrappedPosition(Vector3 current, float baseScrollSpeed, float deltaTime)` (pure test seam) that scrolls left and wraps by exactly `TileWidth` once a tile has fully passed, giving seamless endless scroll with two/three tiled instances per layer.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using NUnit.Framework;
@@ -2252,12 +2252,16 @@ public class ParallaxLayerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: compile error, `ParallaxLayer` not found.
 
-- [ ] **Step 3: Write `ParallaxLayer.cs`**
+> **Note (done 2026-09-29):** `ComputeWrappedPosition` is `internal`, called directly from the EditMode test assembly. `Assets/Scripts/AssemblyInfo.cs`'s `[InternalsVisibleTo]` (added in Task 5.1) only granted `JetpackRide.PlayModeTests` — added a second attribute for `JetpackRide.EditModeTests` before writing the implementation below, so the compile-error run stays a clean "`ParallaxLayer` not found" instead of an access-level error. No other deviations — this class has no `GameManager`-dependent wiring in `Awake`/`OnEnable` (only `Update`, untouched by `[Test]`-style EditMode tests), so the Task 5.1/6.1 injection-order bug doesn't apply here.
+>
+> Verified: compile-error run showed only `ParallaxLayer`-not-found (Step 2); full EditMode suite passed 7/7 (5 prior + 2 new) after Step 3, PlayMode re-checked at 35/35 (unaffected, sanity check after touching the shared `AssemblyInfo.cs`).
+
+- [x] **Step 3: Write `ParallaxLayer.cs`**
 
 ```csharp
 using UnityEngine;
@@ -2292,12 +2296,12 @@ namespace JetpackRide.Environment
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform EditMode -testResults "$PROJECT_PATH/TestResults/EditMode.xml" -logFile -`
 Expected: exit code 0, 2 new tests passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Environment Assets/Tests/EditMode/ParallaxLayerTests.cs
@@ -2314,7 +2318,7 @@ git commit -m "feat: add ParallaxLayer with testable wrap-scroll math"
 - Consumes: `GameManager.StateChanged` (Task 2.1), `ObjectPoolManager.DespawnAll()` (Task 4.1).
 - Produces: `class RunResetService : MonoBehaviour` that calls `pool.DespawnAll()` every time `GameManager` enters `GetReady`, and again defensively when it enters `Running` (covers the case where a hazard was mid-flight and got missed by `HazardMover`'s own despawn). This directly satisfies the Review Focus item about leftover pooled hazards surviving a restart.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using System.Collections;
@@ -2368,12 +2372,12 @@ public class RunResetServiceTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `RunResetService` not found.
 
-- [ ] **Step 3: Write `RunResetService.cs`**
+- [x] **Step 3: Write `RunResetService.cs`**
 
 ```csharp
 using UnityEngine;
@@ -2407,12 +2411,16 @@ namespace JetpackRide.Core
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 1 new test passed.
 
-- [ ] **Step 5: Commit**
+> **Note (done 2026-09-29):** Same injection-order deviation as Tasks 5.1/6.1: the code above subscribes to `gameManager.StateChanged` in `OnEnable`, which `AddComponent<RunResetService>()` fires before the test's reflection `SetValue(reset, manager)` runs. Moved the wiring to `Start`/`OnDestroy`, applied directly (pattern already established, no need to reproduce the failure first). Also note: the **Interfaces** bullet above promises a defensive `DespawnAll()` on entering `Running` too, but the Step 3 code (and the only test) only covers `GetReady` — implemented exactly as specified/tested, didn't add the untested `Running` branch.
+>
+> Verified: compile-error run showed only `RunResetService`-not-found (Step 2); full PlayMode suite passed 36/36 (35 prior + 1 new) after Step 3.
+
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Core/RunResetService.cs Assets/Tests/PlayMode/RunResetServiceTests.cs
