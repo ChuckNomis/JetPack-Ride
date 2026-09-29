@@ -379,7 +379,7 @@ namespace JetpackRide.EditorTools
 
         // Moves the Player's sprite onto a child "Visual" (so run/tilt/tumble rotate the sprite, never
         // the collider), adds PlayerVisuals, and imports + assigns the run cycle from
-        // Art/Sprites/PlayerRun/PlayerRun_<n>.png (sliced from Source/sprites/side-profile-rest.png).
+        // Art/Sprites/PlayerRun/PlayerRun_<n>.png (sliced from Source/sprites/character-running-frames.png).
         // Idempotent. Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
         [MenuItem("Jetpack Ride/Wire Player Visuals")]
         public static void WirePlayerVisuals()

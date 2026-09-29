@@ -98,7 +98,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Coins only spawn in batches (`CoinPatterns`): line and arc early, then arrow (`>`), hollow box and filled rectangle; patterns grow with difficulty.
 * Random rocket volleys: pairs from 250m, up to three from 500m, always with a flyable lane.
 * Death animation (dead sprite, hop, backward tumble).
-* Run pose on the floor (`PlayerVisuals`): plays a 6-frame run cycle (`Art/Sprites/PlayerRun/`, sliced from `Source/sprites/side-profile-rest.png`) while running on the floor and not thrusting, fly sprite otherwise.
+* Run pose on the floor (`PlayerVisuals`): plays an 8-frame run cycle (`Art/Sprites/PlayerRun/`, sliced from `Source/sprites/character-running-frames.png`) while running on the floor and not thrusting, fly sprite otherwise.
 * Forward tilt (up to 12°, eased by fall speed) while free-falling; the sprite lives on a child `Visual`, so tilt and the death tumble never rotate the collider.
 * Rocket warning telegraph, particle FX (jetpack sparks, coin sparkle, death explosion), paired obstacles late in a run, and ease-in difficulty curves (GDD §8.2 polish).
 * Music and SFX wired to gameplay events.

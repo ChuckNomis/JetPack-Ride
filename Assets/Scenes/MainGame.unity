@@ -292,6 +292,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: ad57ff65ccd902f43b5b916770c58bd7, type: 3}
   - {fileID: 21300000, guid: d2ef08b4041438a44a987a2f5cdfe404, type: 3}
   - {fileID: 21300000, guid: 610a3934e1c5b0647bc3e4f00586c3e6, type: 3}
+  - {fileID: 21300000, guid: db1e2ddb02ddf2f48a9c5f25baa6ef57, type: 3}
+  - {fileID: 21300000, guid: 2b181b3d9b93931479f52f8a1c05cd14, type: 3}
   runFps: 12
   floorEpsilon: 0.05
   fallbackBobHeight: 0.04
