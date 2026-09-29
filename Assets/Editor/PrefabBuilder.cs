@@ -378,7 +378,8 @@ namespace JetpackRide.EditorTools
         }
 
         // Moves the Player's sprite onto a child "Visual" (so run/tilt/tumble rotate the sprite, never
-        // the collider) and adds PlayerVisuals (run cycle; frames assigned once run art exists).
+        // the collider), adds PlayerVisuals, and imports + assigns the run cycle from
+        // Art/Sprites/PlayerRun/PlayerRun_<n>.png (sliced from Source/sprites/side-profile-rest.png).
         // Idempotent. Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
         [MenuItem("Jetpack Ride/Wire Player Visuals")]
         public static void WirePlayerVisuals()
@@ -416,10 +417,42 @@ namespace JetpackRide.EditorTools
             so.FindProperty("controller").objectReferenceValue = player;
             so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
             so.FindProperty("target").objectReferenceValue = visualRenderer;
+            var runFrames = ImportRunFrames();
+            var framesProp = so.FindProperty("runFrames");
+            framesProp.arraySize = runFrames.Length;
+            for (int i = 0; i < runFrames.Length; i++) framesProp.GetArrayElementAtIndex(i).objectReferenceValue = runFrames[i];
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
-            Debug.Log("[PrefabBuilder] PlayerVisuals wired.");
+            Debug.Log($"[PrefabBuilder] PlayerVisuals wired ({runFrames.Length} run frames).");
+        }
+
+        private const string RunFrameDir = SpriteDir + "/PlayerRun";
+
+        // Imports PlayerRun_0..n with the same settings as PlayerFly (PPU 100, bilinear, no mips,
+        // uncompressed, centre pivot) and returns them in frame order.
+        private static Sprite[] ImportRunFrames()
+        {
+            var frames = new System.Collections.Generic.List<Sprite>();
+            for (int i = 0; ; i++)
+            {
+                var path = $"{RunFrameDir}/PlayerRun_{i}.png";
+                if (AssetImporter.GetAtPath(path) is not TextureImporter importer) break;
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 100f;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                settings.spriteAlignment = (int)SpriteAlignment.Center;
+                importer.SetTextureSettings(settings);
+                importer.SaveAndReimport();
+                frames.Add(AssetDatabase.LoadAssetAtPath<Sprite>(path));
+            }
+            return frames.ToArray();
         }
 
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.
