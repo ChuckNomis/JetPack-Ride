@@ -31,7 +31,7 @@ public class PlayerVisualsTests
 
     private static Sprite MakeSprite() => Sprite.Create(new Texture2D(4, 4), new Rect(0, 0, 4, 4), Vector2.one * 0.5f);
 
-    private static Rig Build(bool withRunFrames = true, float startY = -3.5f)
+    private static Rig Build(bool withRunFrames = true, float startY = -3.5f, bool childVisual = false)
     {
         var managerGo = new GameObject("GameManager");
         var manager = managerGo.AddComponent<GameManager>();
@@ -41,7 +41,13 @@ public class PlayerVisualsTests
         var go = new GameObject("Player");
         go.transform.position = new Vector3(-6f, startY, 0f);
         go.AddComponent<Rigidbody2D>();
-        var renderer = go.AddComponent<SpriteRenderer>();
+        var visualGo = go;
+        if (childVisual)
+        {
+            visualGo = new GameObject("Visual");
+            visualGo.transform.SetParent(go.transform, false);
+        }
+        var renderer = visualGo.AddComponent<SpriteRenderer>();
         var fly = MakeSprite();
         renderer.sprite = fly;
         var controller = go.AddComponent<PlayerController>();
@@ -166,6 +172,70 @@ public class PlayerVisualsTests
         yield return null;
 
         Assert.AreSame(rig.Fly, rig.Renderer.sprite);
+        rig.Destroy();
+    }
+
+    private static float Tilt(Rig rig) => Mathf.DeltaAngle(0f, rig.Renderer.transform.localEulerAngles.z);
+
+    [UnityTest]
+    public IEnumerator Falling_TiltsForward_WithinMax()
+    {
+        var rig = Build(startY: 2f, childVisual: true);
+        yield return null;
+        rig.Manager.BeginRun();
+
+        yield return new WaitForSeconds(0.25f);
+
+        float maxTilt = (float)typeof(PlayerVisuals).GetField("maxFallTilt", Flags).GetValue(rig.Visuals);
+        Assert.Less(Tilt(rig), -1f, "nose tips forward (clockwise) while falling");
+        Assert.GreaterOrEqual(Tilt(rig), -maxTilt - 1e-3f);
+        Assert.AreEqual(0f, Mathf.DeltaAngle(0f, rig.Go.transform.eulerAngles.z), 1e-3f, "root (collider) never rotates");
+        rig.Destroy();
+    }
+
+    [UnityTest]
+    public IEnumerator Thrusting_ReturnsTiltToZero()
+    {
+        var rig = Build(startY: 2f, childVisual: true);
+        yield return null;
+        rig.Manager.BeginRun();
+        yield return new WaitForSeconds(0.25f);
+        Assert.Less(Tilt(rig), -1f);
+
+        rig.Thrust(true);
+        yield return new WaitForSeconds(0.3f);
+
+        Assert.AreEqual(0f, Tilt(rig), 0.01f);
+        rig.Destroy();
+    }
+
+    [UnityTest]
+    public IEnumerator Grounded_HasNoTilt()
+    {
+        var rig = Build(childVisual: true);
+        yield return null;
+        rig.Manager.BeginRun();
+        rig.Renderer.transform.localRotation = Quaternion.Euler(0f, 0f, -10f);
+
+        yield return new WaitForSeconds(0.3f);
+
+        Assert.AreEqual(0f, Tilt(rig), 0.01f);
+        rig.Destroy();
+    }
+
+    [UnityTest]
+    public IEnumerator GameOver_LeavesRotationToDeathTumble()
+    {
+        var rig = Build(startY: 2f, childVisual: true);
+        yield return null;
+        rig.Manager.BeginRun();
+        yield return null;
+
+        rig.Manager.EndRun();
+        rig.Renderer.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        for (int i = 0; i < 5; i++) yield return null;
+
+        Assert.AreEqual(90f, Tilt(rig), 0.01f);
         rig.Destroy();
     }
 }

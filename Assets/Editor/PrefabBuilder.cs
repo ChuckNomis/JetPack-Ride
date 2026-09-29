@@ -90,7 +90,7 @@ namespace JetpackRide.EditorTools
                 renderer.drawMode = SpriteDrawMode.Sliced;
                 renderer.size = frames[0].bounds.size;
 
-                var shape = zapper.GetComponent<ZapperShape>() ?? zapper.AddComponent<ZapperShape>();
+                if (!zapper.TryGetComponent<ZapperShape>(out var shape)) shape = zapper.AddComponent<ZapperShape>();
                 var so = new SerializedObject(shape);
                 var framesProp = so.FindProperty("frames");
                 framesProp.arraySize = frames.Length;
@@ -377,8 +377,9 @@ namespace JetpackRide.EditorTools
             Debug.Log("[PrefabBuilder] Death animation, coin scale and spark position wired.");
         }
 
-        // Adds PlayerVisuals (run cycle; frames assigned once run art exists) to the Player. Idempotent.
-        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
+        // Moves the Player's sprite onto a child "Visual" (so run/tilt/tumble rotate the sprite, never
+        // the collider) and adds PlayerVisuals (run cycle; frames assigned once run art exists).
+        // Idempotent. Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePlayerVisuals
         [MenuItem("Jetpack Ride/Wire Player Visuals")]
         public static void WirePlayerVisuals()
         {
@@ -386,12 +387,35 @@ namespace JetpackRide.EditorTools
             var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
                 ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
 
-            var visuals = player.GetComponent<JetpackRide.Player.PlayerVisuals>()
-                ?? player.gameObject.AddComponent<JetpackRide.Player.PlayerVisuals>();
+            var visualTransform = player.transform.Find("Visual");
+            if (visualTransform == null)
+            {
+                visualTransform = new GameObject("Visual").transform;
+                visualTransform.SetParent(player.transform, false);
+                visualTransform.SetAsFirstSibling();
+            }
+            // TryGetComponent, not GetComponent + ??: a missing component is a Unity fake-null in the editor.
+            if (!visualTransform.TryGetComponent<SpriteRenderer>(out var visualRenderer))
+                visualRenderer = visualTransform.gameObject.AddComponent<SpriteRenderer>();
+            if (player.TryGetComponent<SpriteRenderer>(out var rootRenderer))
+            {
+                EditorUtility.CopySerialized(rootRenderer, visualRenderer);
+                UnityEngine.Object.DestroyImmediate(rootRenderer);
+            }
+
+            if (player.TryGetComponent<JetpackRide.Player.PlayerDeathAnimator>(out var deathAnimator))
+            {
+                var deathSo = new SerializedObject(deathAnimator);
+                deathSo.FindProperty("target").objectReferenceValue = visualRenderer;
+                deathSo.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            if (!player.TryGetComponent<JetpackRide.Player.PlayerVisuals>(out var visuals))
+                visuals = player.gameObject.AddComponent<JetpackRide.Player.PlayerVisuals>();
             var so = new SerializedObject(visuals);
             so.FindProperty("controller").objectReferenceValue = player;
             so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
-            so.FindProperty("target").objectReferenceValue = player.GetComponentInChildren<SpriteRenderer>();
+            so.FindProperty("target").objectReferenceValue = visualRenderer;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);

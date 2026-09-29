@@ -42,8 +42,8 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
 | `Environment/ParallaxLayer` | `Background_1` / `Background_2` | Infinite horizontal scroll: wraps a tile back by `TileWidth * TileCount` once it scrolls past `-TileWidth`, so multiple equal-speed tiles stay offset instead of converging. |
 | `Player/PlayerController` | `Player` | Reads thrust input, applies upward force while held, clamps the player between `MinY`/`MaxY`, and detects hazard/coin collisions via trigger. Plays the jetpack spark particles while thrusting and spawns the death explosion. |
-| `Player/PlayerDeathAnimator` | `Player` | Observer on `GameManager.StateChanged`: on `GameOver` swaps to the dead sprite, hops, and tumbles a full backward flip (async `Awaitable`); `GetReady` restores the flying pose. |
-| `Player/PlayerVisuals` | `Player` | Observer on `PlayerController.ThrustingChanged`/`GameManager` state: run cycle (code sprite swap) on the floor while `Running` and not thrusting, fly sprite otherwise; leaves `GameOver` to `PlayerDeathAnimator`. |
+| `Player/PlayerDeathAnimator` | `Player` | Observer on `GameManager.StateChanged`: on `GameOver` swaps the child `Visual`'s sprite to the dead sprite, hops, and tumbles it a full backward flip (async `Awaitable`); `GetReady` restores the flying pose. |
+| `Player/PlayerVisuals` | `Player` | Observer on `PlayerController.ThrustingChanged`/`GameManager` state: run cycle (code sprite swap) on the floor while `Running` and not thrusting, fly sprite otherwise, plus free-fall forward tilt of the child `Visual`; leaves `GameOver` to `PlayerDeathAnimator`. |
 | `Player/RestartController` | `Player` | Handles the restart input action, including the post-death lockout timer. |
 | `Hazards/HazardMover` | `Obstacle_Zapper`, `Rocket` prefabs | Moves a spawned hazard left at a configured speed and despawns it back to its pool once it scrolls past `despawnX`. |
 | `Hazards/ObstacleBehaviour` | `Obstacle_Zapper` prefab | Marker component for static hazards; death is driven by the `Hazard` tag + collider, read by `PlayerController`. |
@@ -57,7 +57,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | `Audio/AudioManager` | `AudioManager` | Observer on `GameManager`/`PlayerController`/`SpawnManager` events: switches menu/gameplay music and plays coin, death, rocket-launch SFX and the jetpack loop. |
 | `UI/UIManager` | `UIManager` | Switches Title/HUD/Game Over panels per `GameState` and updates distance/coins/high-score text. |
 
-**Editor tooling (`Assets/Editor/PrefabBuilder.cs`):** menu items under **Jetpack Ride/** that generate or wire assets — `Build Prefabs` (base prefabs; overwrites hand-scaled ones, so avoid re-running), `Build Rocket Warning`, `Build Particle FX`, `Wire Audio And Build Settings`, `Wire Death Animation And Coins`, `Build Zapper Variants` (9-slices the zapper sprites and adds `ZapperShape` + flicker frames to `Obstacle_Zapper`), and `Wire Player Visuals`.
+**Editor tooling (`Assets/Editor/PrefabBuilder.cs`):** menu items under **Jetpack Ride/** that generate or wire assets — `Build Prefabs` (base prefabs; overwrites hand-scaled ones, so avoid re-running), `Build Rocket Warning`, `Build Particle FX`, `Wire Audio And Build Settings`, `Wire Death Animation And Coins`, `Build Zapper Variants` (9-slices the zapper sprites and adds `ZapperShape` + flicker frames to `Obstacle_Zapper`), and `Wire Player Visuals` (moves the Player sprite onto a child `Visual` and wires `PlayerVisuals`/`PlayerDeathAnimator` to it).
 
 ---
 
@@ -98,7 +98,8 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Coins only spawn in batches (`CoinPatterns`): line and arc early, then arrow (`>`), hollow box and filled rectangle; patterns grow with difficulty.
 * Random rocket volleys: pairs from 250m, up to three from 500m, always with a flyable lane.
 * Death animation (dead sprite, hop, backward tumble).
-* Run pose on the floor (`PlayerVisuals`): plays `runFrames` while running on the floor and not thrusting, fly sprite otherwise; with no frames assigned it keeps the fly sprite.
+* Run pose on the floor (`PlayerVisuals`): plays `runFrames` while running on the floor and not thrusting, fly sprite otherwise; with no frames assigned it keeps the fly sprite (with a small bob).
+* Forward tilt (up to 12°, eased by fall speed) while free-falling; the sprite lives on a child `Visual`, so tilt and the death tumble never rotate the collider.
 * Rocket warning telegraph, particle FX (jetpack sparks, coin sparkle, death explosion), paired obstacles late in a run, and ease-in difficulty curves (GDD §8.2 polish).
 * Music and SFX wired to gameplay events.
 * EditMode/PlayMode automated test suites (NUnit) covering game state, difficulty, pooling, spawning (patterns, volleys, clusters), audio, rocket warnings, death animation, and player/hazard behaviour.
@@ -108,7 +109,6 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 
 **Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), in progress):
 * Running animation art (code is in; frames still to be sourced or generated).
-* Forward body tilt while free-falling.
 * Optional start animation (code-only run-in vs. wall-break still being decided).
 
 ---
