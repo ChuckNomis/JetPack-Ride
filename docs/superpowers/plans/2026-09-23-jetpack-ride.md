@@ -1750,7 +1750,7 @@ git commit -m "feat: add CoinBehaviour with idempotent collection, wire into Pla
 - Consumes: `GameManager`, `GameState` (Phase 2), `GameConfig`, `DifficultyEvaluator` (Phase 1), `ObjectPoolManager` (Task 4.1), `RocketBehaviour` (Task 4.3).
 - Produces: `class SpawnManager : MonoBehaviour` with pool ids `"obstacle"`, `"rocket"`, `"coin"` (string constants `SpawnManager.ObstaclePoolId` etc.), internal async loops that start on `GameState.Running` and cancel on any other state. Test seam: `internal void SpawnObstacleNow()`, `internal void SpawnRocketNow()` for deterministic testing without waiting real time.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using System.Collections;
@@ -1856,12 +1856,18 @@ public class SpawnManagerTests
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: compile error, `SpawnManager` not found.
 
-- [ ] **Step 3: Write `SpawnManager.cs`**
+> **Note (done 2026-09-29):** Two deviations from the code below, both required by Unity/test-framework realities, not stylistic choices:
+> 1. `SpawnObstacleNow`/`SpawnRocketNow` are `internal`, called directly from `SpawnManagerTests` in a different assembly (`JetpackRide.PlayModeTests`). That only compiles with an `[InternalsVisibleTo]` grant, which the plan doesn't mention — added `Assets/Scripts/AssemblyInfo.cs`: `[assembly: InternalsVisibleTo("JetpackRide.PlayModeTests")]`.
+> 2. The code below subscribes to `gameManager.StateChanged` in `OnEnable`/`OnDisable`. `AddComponent<SpawnManager>()` fires `OnEnable` synchronously, before the test's reflection-based `SetValue(spawner, manager)` call ever runs — `gameManager` is still null, `NullReferenceException` at `SpawnManager.cs:30`. Fixed the same way `PlayerController`/`RestartController` already do (Phase 3): moved the subscribe to `Start()` and the unsubscribe to `OnDestroy()`, since serialized/test-injected references are only guaranteed set before `Start`, not before `OnEnable`.
+>
+> Verified: compile-error run showed only `SpawnManager`-not-found errors (Step 2); after the two fixes above, full PlayMode suite passed 32/32 (29 prior + 3 new).
+
+- [x] **Step 3: Write `SpawnManager.cs`**
 
 ```csharp
 using System.Threading;
@@ -1970,12 +1976,12 @@ namespace JetpackRide.Spawning
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `"$UNITY_EXE" -batchmode -runTests -projectPath "$PROJECT_PATH" -testPlatform PlayMode -testResults "$PROJECT_PATH/TestResults/PlayMode.xml" -logFile -`
 Expected: exit code 0, 3 new tests passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Assets/Scripts/Spawning Assets/Tests/PlayMode/SpawnManagerTests.cs
