@@ -12,6 +12,7 @@ namespace JetpackRide.Spawning
         public const string RocketPoolId = "rocket";
         public const string CoinPoolId = "coin";
         public const string RocketWarningPoolId = "rocketWarning";
+        public const float MaxClusterYDelta = 2.5f;
 
         [SerializeField] private GameManager gameManager;
         [SerializeField] private ObjectPoolManager pool;
@@ -99,9 +100,15 @@ namespace JetpackRide.Spawning
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             int clusterSize = DetermineObstacleClusterSize(snapshot.RampProgress01);
 
+            // Later cluster members stay within MaxClusterYDelta of the first, so a single open lane
+            // runs through the whole pair instead of demanding a full-height swerve in ~0.1s.
+            float firstY = Random.Range(spawnYRange.x, spawnYRange.y);
             for (int i = 0; i < clusterSize; i++)
             {
-                var pos = new Vector3(spawnPoint.position.x + i * 2.5f, Random.Range(spawnYRange.x, spawnYRange.y), 0f);
+                float y = i == 0
+                    ? firstY
+                    : Random.Range(Mathf.Max(spawnYRange.x, firstY - MaxClusterYDelta), Mathf.Min(spawnYRange.y, firstY + MaxClusterYDelta));
+                var pos = new Vector3(spawnPoint.position.x + i * 2.5f, y, 0f);
                 var instance = pool.Spawn(ObstaclePoolId, pos, Quaternion.identity);
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {

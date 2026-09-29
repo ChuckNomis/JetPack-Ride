@@ -132,4 +132,27 @@ public class SpawnManagerTests
 
         Assert.AreEqual(before, spawner.ActiveObstacleCount);
     }
+    [UnityTest]
+    public IEnumerator SpawnObstacleNow_HighRampCluster_KeepsSharedOpenLane()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(5000f); // past the ramp: clusters of 2
+
+        // Independent random Ys can put one zapper high and the next low 2.5 units later, which
+        // is unfair at max scroll speed. The pair must stay within MaxClusterYDelta of each other.
+        for (int trial = 0; trial < 50; trial++)
+        {
+            pool.DespawnAll();
+            spawner.SpawnObstacleNow();
+            var ys = new System.Collections.Generic.List<float>();
+            foreach (Transform child in pool.transform)
+            {
+                if (child.gameObject.activeSelf) ys.Add(child.position.y);
+            }
+            Assert.AreEqual(2, ys.Count);
+            Assert.LessOrEqual(Mathf.Abs(ys[0] - ys[1]), SpawnManager.MaxClusterYDelta + 1e-4f);
+        }
+    }
 }
