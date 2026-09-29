@@ -86,16 +86,28 @@ namespace JetpackRide.Spawning
             }
         }
 
+        // GDD §3 "Pattern mixing": past the threshold, one spawn window yields a pair of obstacles.
+        public static int DetermineObstacleClusterSize(float rampProgress01)
+        {
+            const float clusterThreshold = 0.65f;
+            return rampProgress01 > clusterThreshold ? 2 : 1;
+        }
+
         internal void SpawnObstacleNow()
         {
-            var pos = new Vector3(spawnPoint.position.x, Random.Range(spawnYRange.x, spawnYRange.y), 0f);
-            var instance = pool.Spawn(ObstaclePoolId, pos, Quaternion.identity);
-            if (instance.TryGetComponent<HazardMover>(out var mover))
+            var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
+            int clusterSize = DetermineObstacleClusterSize(snapshot.RampProgress01);
+
+            for (int i = 0; i < clusterSize; i++)
             {
-                var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-                mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed, despawnX);
+                var pos = new Vector3(spawnPoint.position.x + i * 2.5f, Random.Range(spawnYRange.x, spawnYRange.y), 0f);
+                var instance = pool.Spawn(ObstaclePoolId, pos, Quaternion.identity);
+                if (instance.TryGetComponent<HazardMover>(out var mover))
+                {
+                    mover.Configure(pool, ObstaclePoolId, snapshot.ScrollSpeed, despawnX);
+                }
+                ActiveObstacleCount++;
             }
-            ActiveObstacleCount++;
         }
 
         internal void SpawnRocketNow(float? spawnY = null)
