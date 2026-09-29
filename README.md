@@ -36,7 +36,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | Script | Attached To | Description |
 |---|---|---|
 | `Core/GameManager` | `GameManager` | Central state machine (`GameState`: `GetReady`/`Running`/`GameOver`). Owns distance, coins, score, and persisted high score (`PlayerPrefs`); fires `StateChanged`/`DistanceChanged`/`CoinsChanged`/`ScoreChanged` events. |
-| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curves, coin value, restart lockout. |
+| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curves, rocket lock-on timing (track/lock seconds, track speed), coin value, restart lockout. |
 | `Core/DifficultyEvaluator` | (static, no GameObject) | Pure function mapping distance travelled → a `DifficultySnapshot` (scroll speed, spawn intervals, rocket aggression), driven by `GameConfig`'s curves. |
 | `Core/DistanceTracker` | `DistanceTracker` | Ticks `GameManager.AddDistance()` each frame using the current scroll speed while `Running`. |
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
@@ -46,16 +46,17 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | `Player/RestartController` | `Player` | Handles the restart input action, including the post-death lockout timer. |
 | `Hazards/HazardMover` | `Obstacle_Zapper`, `Rocket` prefabs | Moves a spawned hazard left at a configured speed and despawns it back to its pool once it scrolls past `despawnX`. |
 | `Hazards/ObstacleBehaviour` | `Obstacle_Zapper` prefab | Marker component for static hazards; death is driven by the `Hazard` tag + collider, read by `PlayerController`. |
-| `Hazards/RocketBehaviour` | `Rocket` prefab | Optional homing: steers the rocket's Y toward the player at a capped rate when spawned as a homing rocket. |
-| `Hazards/RocketWarningIndicator` | `RocketWarning` prefab | Pooled warning telegraph shown at the right screen edge before a rocket arrives; despawns itself after the lead time and ignores stale despawns after pool reuse. |
+| `Hazards/RocketBehaviour` | `Rocket` prefab | Marker component; rockets fly straight (aiming happens before launch via the tracking warning). |
+| `Hazards/ZapperShape` | `Obstacle_Zapper` prefab | Sizes a 9-sliced zapper to a length and orientation (collider hugs the beam), cycles the 4 flicker frames, and resets on pool reuse. |
+| `Hazards/RocketWarningIndicator` | `RocketWarning` prefab | Pooled warning telegraph shown at the right screen edge before a rocket arrives; despawns itself after the lead time and ignores stale despawns after pool reuse. `TrackAndLockAsync` follows the player's height, then blinks/pulses as it locks and returns the locked Y. |
 | `Pickups/CoinBehaviour` | `Coin` prefab | Tracks collected state, spawns the coin sparkle FX, and returns itself to the pool once collected. |
 | `Pooling/ObjectPoolManager` | `ObjectPoolManager` | Generic id-keyed object pools (`UnityEngine.Pool.ObjectPool`) for hazards, rockets, and coins; notifies `IPoolable` components on spawn/despawn. |
 | `Pooling/IPoolable` | (interface) | `OnSpawned()`/`OnDespawned()` hooks implemented by pooled components to reset per-spawn state. |
-| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle, rocket, and coin spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. Obstacles cluster in pairs late in the ramp (kept within `MaxClusterYDelta` so an open lane exists); rockets come in distance-based volleys of 1–3 (`rocketPairsFromMeters`, `rocketTriplesFromMeters`), each with its own warning; coins spawn as singles or arcing chains of 5–7. |
+| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle, rocket, and coin spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. Zappers come in mixed orientations/lengths and pair up late in the ramp, laid out by `ZapperLayout` so an open lane (`MinZapperLane`) always exists; rockets come in distance-based volleys of 1–3 (`rocketPairsFromMeters`, `rocketTriplesFromMeters`), each with its own warning, one of which may lock on; coins come only in `CoinPatterns` batches. Tracks live coins/zappers so they keep `CoinZapperClearance` apart (`SpawnSafety`). |
 | `Audio/AudioManager` | `AudioManager` | Observer on `GameManager`/`PlayerController`/`SpawnManager` events: switches menu/gameplay music and plays coin, death, rocket-launch SFX and the jetpack loop. |
 | `UI/UIManager` | `UIManager` | Switches Title/HUD/Game Over panels per `GameState` and updates distance/coins/high-score text. |
 
-**Editor tooling (`Assets/Editor/PrefabBuilder.cs`):** menu items under **Jetpack Ride/** that generate or wire assets — `Build Prefabs` (base prefabs; overwrites hand-scaled ones, so avoid re-running), `Build Rocket Warning`, `Build Particle FX`, `Wire Audio And Build Settings`, and `Wire Death Animation And Coins`.
+**Editor tooling (`Assets/Editor/PrefabBuilder.cs`):** menu items under **Jetpack Ride/** that generate or wire assets — `Build Prefabs` (base prefabs; overwrites hand-scaled ones, so avoid re-running), `Build Rocket Warning`, `Build Particle FX`, `Wire Audio And Build Settings`, `Wire Death Animation And Coins`, and `Build Zapper Variants` (9-slices the zapper sprites and adds `ZapperShape` + flicker frames to `Obstacle_Zapper`).
 
 ---
 
