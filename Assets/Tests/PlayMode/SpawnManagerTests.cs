@@ -23,6 +23,10 @@ public class SpawnManagerTests
         rocketPrefab.AddComponent<JetpackRide.Hazards.RocketBehaviour>();
         rocketPrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
         rocketPrefab.SetActive(false);
+        var coinPrefab = new GameObject("CoinPrefab");
+        coinPrefab.AddComponent<JetpackRide.Pickups.CoinBehaviour>();
+        coinPrefab.AddComponent<JetpackRide.Hazards.HazardMover>();
+        coinPrefab.SetActive(false);
 
         var poolGo = new GameObject("Pool");
         var pool = poolGo.AddComponent<ObjectPoolManager>();
@@ -41,6 +45,7 @@ public class SpawnManagerTests
         }
         AddEntry("obstacle", obstaclePrefab);
         AddEntry("rocket", rocketPrefab);
+        AddEntry("coin", coinPrefab);
         typeof(ObjectPoolManager).GetField("poolEntries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
             .SetValue(pool, list);
 
@@ -153,6 +158,60 @@ public class SpawnManagerTests
             }
             Assert.AreEqual(2, ys.Count);
             Assert.LessOrEqual(Mathf.Abs(ys[0] - ys[1]), SpawnManager.MaxClusterYDelta + 1e-4f);
+        }
+    }
+    [UnityTest]
+    public IEnumerator SpawnCoinsNow_SpawnsWholePatternAtOrBeyondSpawnPoint()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+
+        int spawned = spawner.SpawnCoinsNow();
+        yield return null;
+
+        int active = 0;
+        foreach (Transform child in pool.transform)
+        {
+            if (!child.gameObject.activeSelf || child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() == null) continue;
+            active++;
+            Assert.GreaterOrEqual(child.position.x, 12f - 1f, "coins enter from the right");
+        }
+        Assert.GreaterOrEqual(spawned, 1);
+        Assert.AreEqual(spawned, active);
+    }
+
+    [Test]
+    public void CoinPatternOffsets_Chain_IsEvenlySpacedArc()
+    {
+        var offsets = SpawnManager.CoinPatternOffsets(5, spacing: 0.8f, arcHeight: 1f);
+
+        Assert.AreEqual(5, offsets.Length);
+        for (int i = 1; i < offsets.Length; i++) Assert.AreEqual(0.8f, offsets[i].x - offsets[i - 1].x, 1e-4f);
+        Assert.AreEqual(0f, offsets[0].y, 1e-4f);
+        Assert.AreEqual(0f, offsets[4].y, 1e-4f);
+        Assert.AreEqual(1f, offsets[2].y, 1e-4f, "middle coin is the arc's peak");
+    }
+
+    [Test]
+    public void DetermineRocketVolleySize_SingleEarly_PairLate()
+    {
+        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(0.3f));
+        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(0.5f));
+        Assert.AreEqual(2, SpawnManager.DetermineRocketVolleySize(0.7f));
+    }
+
+    [Test]
+    public void PickSecondRocketY_StaysInRange_AndSeparated()
+    {
+        var range = new Vector2(-3.5f, 3.5f);
+        foreach (float firstY in new[] { -3.5f, -1f, 0f, 2f, 3.5f })
+        foreach (float r in new[] { 0f, 0.25f, 0.5f, 0.75f, 1f })
+        {
+            float y = SpawnManager.PickSecondRocketY(firstY, range, SpawnManager.MinRocketPairGap, r);
+            Assert.GreaterOrEqual(y, range.x - 1e-4f);
+            Assert.LessOrEqual(y, range.y + 1e-4f);
+            Assert.GreaterOrEqual(Mathf.Abs(y - firstY), SpawnManager.MinRocketPairGap - 1e-4f, $"first={firstY} r={r}");
         }
     }
 }

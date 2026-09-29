@@ -13,6 +13,7 @@ namespace JetpackRide.Spawning
         public const string CoinPoolId = "coin";
         public const string RocketWarningPoolId = "rocketWarning";
         public const float MaxClusterYDelta = 2.5f;
+        public const float MinRocketPairGap = 3f;
 
         [SerializeField] private GameManager gameManager;
         [SerializeField] private ObjectPoolManager pool;
@@ -23,6 +24,10 @@ namespace JetpackRide.Spawning
         [SerializeField] private float despawnX = -14f;
         [SerializeField] private float warningLeadSeconds = 0.5f;
         [SerializeField] private float warningX = 8.5f;
+        [SerializeField] private Vector2 coinSpawnIntervalRange = new(2.5f, 4f);
+        [SerializeField, Range(0f, 1f)] private float coinChainChance = 0.6f;
+        [SerializeField] private float coinSpacing = 0.8f;
+        [SerializeField] private float coinArcHeight = 1.2f;
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastSpawnedRocketWasHoming { get; private set; }
@@ -51,6 +56,7 @@ namespace JetpackRide.Spawning
                 cts = new CancellationTokenSource();
                 RunObstacleLoopAsync(cts.Token).Forget();
                 RunRocketLoopAsync(cts.Token).Forget();
+                RunCoinLoopAsync(cts.Token).Forget();
             }
         }
 
@@ -74,18 +80,97 @@ namespace JetpackRide.Spawning
                 await Awaitable.WaitForSecondsAsync(waitBeforeWarning, token);
                 if (token.IsCancellationRequested) break;
 
-                float y = Random.Range(spawnYRange.x, spawnYRange.y);
-                var warning = pool.Spawn(RocketWarningPoolId, new Vector3(warningX, y, 0f), Quaternion.identity);
-                if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
-                {
-                    indicator.Configure(pool, RocketWarningPoolId);
-                    indicator.PlayAndDespawnAsync(warningLeadSeconds).Forget();
-                }
+                snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
+                float firstY = Random.Range(spawnYRange.x, spawnYRange.y);
+                bool pair = DetermineRocketVolleySize(snapshot.RampProgress01) == 2;
+                float secondY = pair ? PickSecondRocketY(firstY, spawnYRange, MinRocketPairGap, Random.value) : 0f;
+
+                ShowWarning(firstY);
+                if (pair) ShowWarning(secondY);
 
                 await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
                 if (token.IsCancellationRequested) break;
-                SpawnRocketNow(spawnY: y);
+                SpawnRocketNow(spawnY: firstY);
+                // Only the first of a pair may home, or both would converge into one rocket.
+                if (pair) SpawnRocketNow(spawnY: secondY, allowHoming: false);
             }
+        }
+
+        private async Awaitable RunCoinLoopAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Awaitable.WaitForSecondsAsync(Random.Range(coinSpawnIntervalRange.x, coinSpawnIntervalRange.y), token);
+                if (token.IsCancellationRequested) break;
+                SpawnCoinsNow();
+            }
+        }
+
+        private void ShowWarning(float y)
+        {
+            var warning = pool.Spawn(RocketWarningPoolId, new Vector3(warningX, y, 0f), Quaternion.identity);
+            if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
+            {
+                indicator.Configure(pool, RocketWarningPoolId);
+                indicator.PlayAndDespawnAsync(warningLeadSeconds).Forget();
+            }
+        }
+
+        // Past the midpoint of the ramp, rockets come in simultaneous pairs.
+        public static int DetermineRocketVolleySize(float rampProgress01)
+        {
+            const float pairThreshold = 0.5f;
+            return rampProgress01 > pairThreshold ? 2 : 1;
+        }
+
+        // Picks the pair's second Y at least minGap from the first, above or below, mapping random01
+        // across both allowed bands so a lane between/around the two rockets always stays open.
+        public static float PickSecondRocketY(float firstY, Vector2 yRange, float minGap, float random01)
+        {
+            float belowLen = Mathf.Max(0f, (firstY - minGap) - yRange.x);
+            float aboveLen = Mathf.Max(0f, yRange.y - (firstY + minGap));
+            float total = belowLen + aboveLen;
+            if (total <= 0f)
+            {
+                // Range too tight for the gap: take the farthest edge.
+                return firstY - yRange.x > yRange.y - firstY ? yRange.x : yRange.y;
+            }
+
+            float t = Mathf.Clamp01(random01) * total;
+            return belowLen > 0f && t <= belowLen ? yRange.x + t : firstY + minGap + (t - belowLen);
+        }
+
+        // GDD §3: coins come as single pickups or short arcing chains.
+        public static Vector2[] CoinPatternOffsets(int count, float spacing, float arcHeight)
+        {
+            var offsets = new Vector2[count];
+            for (int i = 0; i < count; i++)
+            {
+                float y = count > 1 ? arcHeight * Mathf.Sin(Mathf.PI * i / (count - 1)) : 0f;
+                offsets[i] = new Vector2(i * spacing, y);
+            }
+            return offsets;
+        }
+
+        internal int SpawnCoinsNow()
+        {
+            var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
+            bool chain = Random.value < coinChainChance;
+            int count = chain ? Random.Range(5, 8) : 1;
+            var offsets = CoinPatternOffsets(count, coinSpacing, chain ? coinArcHeight : 0f);
+
+            // Keep the whole arc inside the play band.
+            float baseY = Random.Range(spawnYRange.x, spawnYRange.y - (chain ? coinArcHeight : 0f));
+            foreach (var offset in offsets)
+            {
+                var pos = new Vector3(spawnPoint.position.x + offset.x, baseY + offset.y, 0f);
+                var instance = pool.Spawn(CoinPoolId, pos, Quaternion.identity);
+                if (instance.TryGetComponent<HazardMover>(out var mover))
+                {
+                    mover.Configure(pool, CoinPoolId, snapshot.ScrollSpeed, despawnX);
+                }
+            }
+            return count;
         }
 
         // GDD §3 "Pattern mixing": past the threshold, one spawn window yields a pair of obstacles.
@@ -118,10 +203,10 @@ namespace JetpackRide.Spawning
             }
         }
 
-        internal void SpawnRocketNow(float? spawnY = null)
+        internal void SpawnRocketNow(float? spawnY = null, bool allowHoming = true)
         {
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-            bool homing = Random.value < snapshot.RocketAggression;
+            bool homing = allowHoming && Random.value < snapshot.RocketAggression;
             LastSpawnedRocketWasHoming = homing;
 
             var pos = new Vector3(spawnPoint.position.x, spawnY ?? Random.Range(spawnYRange.x, spawnYRange.y), 0f);
