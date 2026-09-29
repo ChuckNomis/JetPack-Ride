@@ -194,24 +194,40 @@ public class SpawnManagerTests
     }
 
     [Test]
-    public void DetermineRocketVolleySize_SingleEarly_PairLate()
+    public void DetermineRocketVolleySize_ByDistance()
     {
-        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(0.3f));
-        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(0.5f));
-        Assert.AreEqual(2, SpawnManager.DetermineRocketVolleySize(0.7f));
+        // Before 250m: always single.
+        foreach (float r in new[] { 0f, 0.5f, 0.99f })
+            Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(100f, r, 250f, 500f));
+
+        // 250-500m: sometimes 1, sometimes 2, never 3.
+        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(300f, 0.1f, 250f, 500f));
+        Assert.AreEqual(2, SpawnManager.DetermineRocketVolleySize(300f, 0.9f, 250f, 500f));
+
+        // From 500m: 1, 2 or 3.
+        Assert.AreEqual(1, SpawnManager.DetermineRocketVolleySize(600f, 0.1f, 250f, 500f));
+        Assert.AreEqual(2, SpawnManager.DetermineRocketVolleySize(600f, 0.5f, 250f, 500f));
+        Assert.AreEqual(3, SpawnManager.DetermineRocketVolleySize(600f, 0.9f, 250f, 500f));
     }
 
     [Test]
-    public void PickSecondRocketY_StaysInRange_AndSeparated()
+    public void PickVolleyYs_StaysInRange_AndSeparated()
     {
         var range = new Vector2(-3.5f, 3.5f);
-        foreach (float firstY in new[] { -3.5f, -1f, 0f, 2f, 3.5f })
-        foreach (float r in new[] { 0f, 0.25f, 0.5f, 0.75f, 1f })
+        var rng = new System.Random(1234);
+        for (int trial = 0; trial < 200; trial++)
         {
-            float y = SpawnManager.PickSecondRocketY(firstY, range, SpawnManager.MinRocketPairGap, r);
-            Assert.GreaterOrEqual(y, range.x - 1e-4f);
-            Assert.LessOrEqual(y, range.y + 1e-4f);
-            Assert.GreaterOrEqual(Mathf.Abs(y - firstY), SpawnManager.MinRocketPairGap - 1e-4f, $"first={firstY} r={r}");
+            int count = 1 + trial % 3;
+            var ys = SpawnManager.PickVolleyYs(count, range, SpawnManager.MinRocketPairGap, () => (float)rng.NextDouble());
+
+            Assert.AreEqual(count, ys.Length, "a 7-unit band fits 3 rockets 3 units apart");
+            for (int i = 0; i < ys.Length; i++)
+            {
+                Assert.GreaterOrEqual(ys[i], range.x - 1e-4f);
+                Assert.LessOrEqual(ys[i], range.y + 1e-4f);
+                for (int j = i + 1; j < ys.Length; j++)
+                    Assert.GreaterOrEqual(Mathf.Abs(ys[i] - ys[j]), SpawnManager.MinRocketPairGap - 1e-4f);
+            }
         }
     }
 }

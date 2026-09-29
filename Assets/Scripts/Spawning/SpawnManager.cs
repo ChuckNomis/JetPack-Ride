@@ -24,6 +24,8 @@ namespace JetpackRide.Spawning
         [SerializeField] private float despawnX = -14f;
         [SerializeField] private float warningLeadSeconds = 0.5f;
         [SerializeField] private float warningX = 8.5f;
+        [SerializeField] private float rocketPairsFromMeters = 250f;
+        [SerializeField] private float rocketTriplesFromMeters = 500f;
         [SerializeField] private Vector2 coinSpawnIntervalRange = new(2.5f, 4f);
         [SerializeField, Range(0f, 1f)] private float coinChainChance = 0.6f;
         [SerializeField] private float coinSpacing = 0.8f;
@@ -80,19 +82,14 @@ namespace JetpackRide.Spawning
                 await Awaitable.WaitForSecondsAsync(waitBeforeWarning, token);
                 if (token.IsCancellationRequested) break;
 
-                snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-                float firstY = Random.Range(spawnYRange.x, spawnYRange.y);
-                bool pair = DetermineRocketVolleySize(snapshot.RampProgress01) == 2;
-                float secondY = pair ? PickSecondRocketY(firstY, spawnYRange, MinRocketPairGap, Random.value) : 0f;
-
-                ShowWarning(firstY);
-                if (pair) ShowWarning(secondY);
+                int volley = DetermineRocketVolleySize(gameManager.DistanceMeters, Random.value, rocketPairsFromMeters, rocketTriplesFromMeters);
+                var ys = PickVolleyYs(volley, spawnYRange, MinRocketPairGap, () => Random.value);
+                foreach (float y in ys) ShowWarning(y);
 
                 await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
                 if (token.IsCancellationRequested) break;
-                SpawnRocketNow(spawnY: firstY);
-                // Only the first of a pair may home, or both would converge into one rocket.
-                if (pair) SpawnRocketNow(spawnY: secondY, allowHoming: false);
+                // Only the first rocket of a volley may home, or they'd converge into one.
+                for (int i = 0; i < ys.Length; i++) SpawnRocketNow(spawnY: ys[i], allowHoming: i == 0);
             }
         }
 
@@ -116,28 +113,38 @@ namespace JetpackRide.Spawning
             }
         }
 
-        // Past the midpoint of the ramp, rockets come in simultaneous pairs.
-        public static int DetermineRocketVolleySize(float rampProgress01)
+        // Random volley size by distance: always 1 before pairsFrom; 1 or 2 (50/50) until triplesFrom;
+        // then 1/2/3 at 30/40/30.
+        public static int DetermineRocketVolleySize(float distanceMeters, float random01, float pairsFromMeters, float triplesFromMeters)
         {
-            const float pairThreshold = 0.5f;
-            return rampProgress01 > pairThreshold ? 2 : 1;
+            if (distanceMeters < pairsFromMeters) return 1;
+            if (distanceMeters < triplesFromMeters) return random01 < 0.5f ? 1 : 2;
+            return random01 < 0.3f ? 1 : random01 < 0.7f ? 2 : 3;
         }
 
-        // Picks the pair's second Y at least minGap from the first, above or below, mapping random01
-        // across both allowed bands so a lane between/around the two rockets always stays open.
-        public static float PickSecondRocketY(float firstY, Vector2 yRange, float minGap, float random01)
+        // Picks `count` Ys in the band, each at least minGap from its neighbours so there's always a
+        // lane to fly through. The band's slack beyond the mandatory gaps is split randomly between
+        // them, so every result is valid by construction. If the band can't fit `count`, fewer are
+        // returned. Order is shuffled so the (possibly homing) first rocket isn't always the lowest.
+        public static float[] PickVolleyYs(int count, Vector2 yRange, float minGap, System.Func<float> random01)
         {
-            float belowLen = Mathf.Max(0f, (firstY - minGap) - yRange.x);
-            float aboveLen = Mathf.Max(0f, yRange.y - (firstY + minGap));
-            float total = belowLen + aboveLen;
-            if (total <= 0f)
-            {
-                // Range too tight for the gap: take the farthest edge.
-                return firstY - yRange.x > yRange.y - firstY ? yRange.x : yRange.y;
-            }
+            float span = yRange.y - yRange.x;
+            while (count > 1 && (count - 1) * minGap > span) count--;
+            float slack = span - (count - 1) * minGap;
 
-            float t = Mathf.Clamp01(random01) * total;
-            return belowLen > 0f && t <= belowLen ? yRange.x + t : firstY + minGap + (t - belowLen);
+            var cuts = new float[count];
+            for (int i = 0; i < count; i++) cuts[i] = random01() * slack;
+            System.Array.Sort(cuts);
+
+            var ys = new float[count];
+            for (int i = 0; i < count; i++) ys[i] = yRange.x + cuts[i] + i * minGap;
+
+            for (int i = count - 1; i > 0; i--)
+            {
+                int j = Mathf.Min(i, (int)(random01() * (i + 1)));
+                (ys[i], ys[j]) = (ys[j], ys[i]);
+            }
+            return ys;
         }
 
         // GDD §3: coins come as single pickups or short arcing chains.
