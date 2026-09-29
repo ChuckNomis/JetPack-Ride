@@ -2499,7 +2499,9 @@ Open the project in the Unity Editor, open `MainGame.unity`, press Play. Verify:
 
 > **Note (done 2026-09-29):** Second pass found Player and hazard sprites too small at default scale `(1,1,1)`. Bumped `Player` (in `MainGame.unity`), `Obstacle_Zapper.prefab`, and `Rocket.prefab` to `(2,2,2)` — colliders scale automatically with the transform, no separate collider edits needed. User adjusted further in-Editor on top of this. **MainGame scene still needs further sizing/layout adjustments** — not yet considered final; revisit before closing Task 7.3.
 
-- [ ] **Step 12: Commit**
+> **Note (done 2026-09-29):** Third pass covered a batch of follow-up fixes: player/hazard sizing (above), font applied to all UI text (`New Athletic M54 SDF`), UI panel white-transparent background removed, rocket now scrolls faster than the zapper obstacle (`GameConfig.RocketSpeedMultiplier`), player floor raised (`MinY` -4.8 → -3.5) so the player reads as standing on ground, and background simplified from 4 parallax objects to 2 plain infinite-scroll objects (`Background_1`/`Background_2`). That simplification introduced a regression — the 2 tiles converged to the same position after ~6.4s, exposing the camera's blue clear color — root-caused to `ParallaxLayer`'s wrap math (single-tile increment used with a 2-tile belt) and fixed via `TileCount`. User re-playtested and confirmed: background now scrolls continuously, no blue gap. **Re-playtest confirmed clean — Step 11 closed.**
+
+- [x] **Step 12: Commit**
 
 ```bash
 git add Assets/Scenes/MainGame.unity Assets/Scenes/MainGame.unity.meta ProjectSettings/TagManager.asset
