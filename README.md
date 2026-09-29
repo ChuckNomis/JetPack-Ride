@@ -25,9 +25,9 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * **`GetReady`**  
   Title screen. Pressing `Space`/click starts the run (`GameManager.BeginRun()`), resetting distance, coins, and score. `RunResetService` clears any pooled hazards left over from the previous run.
 * **`Running`**  
-  Active gameplay: the player takes thrust input, hazards/rockets/coins spawn and scroll in from the right, distance and score tick up (`DistanceTracker`), and difficulty (scroll speed, spawn rate, rocket aggression) ramps up with distance via `DifficultyEvaluator`.
+  Active gameplay: the player takes thrust input, zappers/rockets/coins spawn and scroll in from the right (each rocket preceded by a warning telegraph), distance and score tick up (`DistanceTracker`), and difficulty (scroll speed, spawn rate, rocket aggression) ramps up with distance via `DifficultyEvaluator`.
 * **`GameOver`**  
-  Triggered when the player collides with a zapper or a rocket (`PlayerController.OnTriggerEnter2D`). Shows final distance/coins and high score. A short input lockout (`RestartController`, `GameConfig.RestartLockoutSeconds`) prevents an accidental instant restart; pressing again returns to `GetReady`.
+  Triggered when the player collides with a zapper or a rocket (`PlayerController.OnTriggerEnter2D`). The player explodes and plays a death animation (dead sprite, hop, backward tumble). Shows final distance/coins and high score. A short input lockout (`RestartController`, `GameConfig.RestartLockoutSeconds`) prevents an accidental instant restart; pressing again returns to `GetReady`.
 
 ---
 
@@ -41,16 +41,21 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | `Core/DistanceTracker` | `DistanceTracker` | Ticks `GameManager.AddDistance()` each frame using the current scroll speed while `Running`. |
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
 | `Environment/ParallaxLayer` | `Background_1` / `Background_2` | Infinite horizontal scroll: wraps a tile back by `TileWidth * TileCount` once it scrolls past `-TileWidth`, so multiple equal-speed tiles stay offset instead of converging. |
-| `Player/PlayerController` | `Player` | Reads thrust input, applies upward force while held, clamps the player between `MinY`/`MaxY`, and detects hazard/coin collisions via trigger. |
+| `Player/PlayerController` | `Player` | Reads thrust input, applies upward force while held, clamps the player between `MinY`/`MaxY`, and detects hazard/coin collisions via trigger. Plays the jetpack spark particles while thrusting and spawns the death explosion. |
+| `Player/PlayerDeathAnimator` | `Player` | Observer on `GameManager.StateChanged`: on `GameOver` swaps to the dead sprite, hops, and tumbles a full backward flip (async `Awaitable`); `GetReady` restores the flying pose. |
 | `Player/RestartController` | `Player` | Handles the restart input action, including the post-death lockout timer. |
 | `Hazards/HazardMover` | `Obstacle_Zapper`, `Rocket` prefabs | Moves a spawned hazard left at a configured speed and despawns it back to its pool once it scrolls past `despawnX`. |
 | `Hazards/ObstacleBehaviour` | `Obstacle_Zapper` prefab | Marker component for static hazards; death is driven by the `Hazard` tag + collider, read by `PlayerController`. |
 | `Hazards/RocketBehaviour` | `Rocket` prefab | Optional homing: steers the rocket's Y toward the player at a capped rate when spawned as a homing rocket. |
-| `Pickups/CoinBehaviour` | `Coin` prefab | Tracks collected state and returns itself to the pool once collected. |
+| `Hazards/RocketWarningIndicator` | `RocketWarning` prefab | Pooled warning telegraph shown at the right screen edge before a rocket arrives; despawns itself after the lead time and ignores stale despawns after pool reuse. |
+| `Pickups/CoinBehaviour` | `Coin` prefab | Tracks collected state, spawns the coin sparkle FX, and returns itself to the pool once collected. |
 | `Pooling/ObjectPoolManager` | `ObjectPoolManager` | Generic id-keyed object pools (`UnityEngine.Pool.ObjectPool`) for hazards, rockets, and coins; notifies `IPoolable` components on spawn/despawn. |
 | `Pooling/IPoolable` | (interface) | `OnSpawned()`/`OnDespawned()` hooks implemented by pooled components to reset per-spawn state. |
-| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle/rocket spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. |
+| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle, rocket, and coin spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. Obstacles cluster in pairs late in the ramp (kept within `MaxClusterYDelta` so an open lane exists); rockets come in distance-based volleys of 1–3 (`rocketPairsFromMeters`, `rocketTriplesFromMeters`), each with its own warning; coins spawn as singles or arcing chains of 5–7. |
+| `Audio/AudioManager` | `AudioManager` | Observer on `GameManager`/`PlayerController`/`SpawnManager` events: switches menu/gameplay music and plays coin, death, rocket-launch SFX and the jetpack loop. |
 | `UI/UIManager` | `UIManager` | Switches Title/HUD/Game Over panels per `GameState` and updates distance/coins/high-score text. |
+
+**Editor tooling (`Assets/Editor/PrefabBuilder.cs`):** menu items under **Jetpack Ride/** that generate or wire assets — `Build Prefabs` (base prefabs; overwrites hand-scaled ones, so avoid re-running), `Build Rocket Warning`, `Build Particle FX`, `Wire Audio And Build Settings`, and `Wire Death Animation And Coins`.
 
 ---
 
@@ -59,11 +64,14 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 `Assets/Scenes/MainGame.unity` wiring:
 
 * **`GameManager`** — the `GameManager` component, assigned a `GameConfig` asset.
-* **`ObjectPoolManager`** — pool entries for `Obstacle_Zapper`, `Rocket`, and `Coin` prefabs.
+* **`ObjectPoolManager`** — pool entries `obstacle`, `rocket`, `coin`, and `rocketWarning` (`Obstacle_Zapper`, `Rocket`, `Coin`, `RocketWarning` prefabs).
 * **`SpawnManager`**, **`RunResetService`**, **`DistanceTracker`** — gameplay-loop services described above.
-* **`Player`** — `Rigidbody2D` + `PlayerController` + `RestartController`, clamped to the play area (`MinY`/`MaxY`).
+* **`Player`** — `Rigidbody2D` + `PlayerController` + `RestartController` + `PlayerDeathAnimator`, clamped to the play area (`MinY`/`MaxY`); references the `FX_JetpackSpark` child and `FX_Explosion` prefab.
+* **`AudioManager`** — music/SFX clips from `Assets/Audio`, bound to `GameManager`, `Player`, and `SpawnManager`.
 * **`Background_1` / `Background_2`** — two `ParallaxLayer` tiles (`BackdropMain` sprite) that infinitely scroll left and wrap, giving the illusion of an endless track.
 * **`UIManager`** — Title / HUD / Game Over panels, TMP text bound to `GameManager` events, font applied from `Assets/Art/Fonts` (New Athletic M54).
+
+`MainGame` is the only scene in Build Settings.
 
 **Audio:** `AudioManager` (observer) plays `mainmenu.wav` on the title screen and `Gameplay.wav` during a run (both streamed), `right.wav` on coin pickup, `DiedEletricity.wav` on death, the launch sound on each rocket spawn, and a `FlyTest.wav` loop while thrusting.
 
@@ -86,7 +94,14 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Death animation (dead sprite, hop, backward tumble).
 * Rocket warning telegraph, particle FX (jetpack sparks, coin sparkle, death explosion), paired obstacles late in a run, and ease-in difficulty curves (GDD §8.2 polish).
 * Music and SFX wired to gameplay events.
-* EditMode/PlayMode automated test suites (NUnit) covering game state, difficulty, pooling, spawning, and player/hazard behaviour.
+* EditMode/PlayMode automated test suites (NUnit) covering game state, difficulty, pooling, spawning (patterns, volleys, clusters), audio, rocket warnings, death animation, and player/hazard behaviour.
 
 **Pending / known gaps:**
 * `MainGame.unity` layout (sizing, HUD placement) is still being iterated on — not yet considered final.
+
+---
+
+## Development Notes
+
+* **First open of a fresh clone:** Unity starts in an empty untitled scene (blue screen). Open `Assets/Scenes/MainGame.unity` once; Unity remembers it afterwards.
+* **MCP for Unity:** the `com.coplaydev.unity-mcp` package lets an AI agent drive the editor (run tests, take screenshots). Its test runner may set `m_EnterPlayModeOptions` to `1` (skip domain reload) in `ProjectSettings/EditorSettings.asset` — do not commit that; revert with `git restore ProjectSettings/EditorSettings.asset`.
