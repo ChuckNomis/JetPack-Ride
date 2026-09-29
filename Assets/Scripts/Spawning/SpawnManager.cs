@@ -28,7 +28,6 @@ namespace JetpackRide.Spawning
         [SerializeField] private float rocketPairsFromMeters = 250f;
         [SerializeField] private float rocketTriplesFromMeters = 500f;
         [SerializeField] private Vector2 coinSpawnIntervalRange = new(2.5f, 4f);
-        [SerializeField, Range(0f, 1f)] private float coinChainChance = 0.6f;
         [SerializeField] private float coinSpacing = 0.8f;
         [SerializeField] private float coinArcHeight = 1.2f;
         [Tooltip("World-unit zapper lengths, short..long; the longest unlocks later in a run.")]
@@ -153,28 +152,18 @@ namespace JetpackRide.Spawning
             return ys;
         }
 
-        // GDD §3: coins come as single pickups or short arcing chains.
-        public static Vector2[] CoinPatternOffsets(int count, float spacing, float arcHeight)
-        {
-            var offsets = new Vector2[count];
-            for (int i = 0; i < count; i++)
-            {
-                float y = count > 1 ? arcHeight * Mathf.Sin(Mathf.PI * i / (count - 1)) : 0f;
-                offsets[i] = new Vector2(i * spacing, y);
-            }
-            return offsets;
-        }
-
+        // Coins only come in batches (CoinPatterns); bigger and more varied shapes later in a run.
         internal int SpawnCoinsNow()
         {
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-            bool chain = Random.value < coinChainChance;
-            int count = chain ? Random.Range(5, 8) : 1;
-            var offsets = CoinPatternOffsets(count, coinSpacing, chain ? coinArcHeight : 0f);
+            var pattern = CoinPatterns.Pick(snapshot.RampProgress01, Random.value, coinSpacing, coinArcHeight);
 
-            // Keep the whole arc inside the play band.
-            float baseY = Random.Range(spawnYRange.x, spawnYRange.y - (chain ? coinArcHeight : 0f));
-            foreach (var offset in offsets)
+            // Keep the whole pattern inside the play band.
+            float maxBaseY = spawnYRange.y - pattern.Bounds.height;
+            float baseY = maxBaseY < spawnYRange.x
+                ? (spawnYRange.x + spawnYRange.y - pattern.Bounds.height) * 0.5f
+                : Random.Range(spawnYRange.x, maxBaseY);
+            foreach (var offset in pattern.Offsets)
             {
                 var pos = new Vector3(spawnPoint.position.x + offset.x, baseY + offset.y, 0f);
                 var instance = pool.Spawn(CoinPoolId, pos, Quaternion.identity);
@@ -183,7 +172,7 @@ namespace JetpackRide.Spawning
                     mover.Configure(pool, CoinPoolId, snapshot.ScrollSpeed, despawnX);
                 }
             }
-            return count;
+            return pattern.Offsets.Length;
         }
 
         // GDD §3 "Pattern mixing": past the threshold, one spawn window yields a pair of obstacles.

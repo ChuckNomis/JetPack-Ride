@@ -91,7 +91,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Persisted high score (`PlayerPrefs`) shown on the title screen and Game Over panel.
 * Full run reset on restart — no leftover hazards from the previous run.
 * Infinite-scrolling background (2-tile belt, `ParallaxLayer` + `TileCount`).
-* Coins spawn as single pickups and arcing chains.
+* Coins only spawn in batches (`CoinPatterns`): line and arc early, then arrow (`>`), hollow box and filled rectangle; patterns grow with difficulty.
 * Random rocket volleys: pairs from 250m, up to three from 500m, always with a flyable lane.
 * Death animation (dead sprite, hop, backward tumble).
 * Rocket warning telegraph, particle FX (jetpack sparks, coin sparkle, death explosion), paired obstacles late in a run, and ease-in difficulty curves (GDD §8.2 polish).
@@ -102,7 +102,6 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * `MainGame.unity` layout (sizing, HUD placement) is still being iterated on — not yet considered final.
 
 **Planned — Phase 9: Game Feel & Juice** ([plan](docs/superpowers/plans/2026-09-29-game-feel.md), in progress):
-* Coins only in batches, in shapes: line, arc, arrow, box, rectangle.
 * Safety distance so coins and zappers never overlap or spawn touching.
 * Rocket lock-on: the warning tracks the player's height for 1–2s, locks, then the rocket flies straight (replaces in-flight homing).
 * Running animation on the floor (asset source still being decided).

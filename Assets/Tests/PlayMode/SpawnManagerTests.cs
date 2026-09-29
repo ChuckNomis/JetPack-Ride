@@ -210,20 +210,33 @@ public class SpawnManagerTests
             active++;
             Assert.GreaterOrEqual(child.position.x, 12f - 1f, "coins enter from the right");
         }
-        Assert.GreaterOrEqual(spawned, 1);
+        Assert.GreaterOrEqual(spawned, 2);
         Assert.AreEqual(spawned, active);
     }
 
-    [Test]
-    public void CoinPatternOffsets_Chain_IsEvenlySpacedArc()
+    [UnityTest]
+    public IEnumerator SpawnCoinsNow_AlwaysABatch_InsideTheBand()
     {
-        var offsets = SpawnManager.CoinPatternOffsets(5, spacing: 0.8f, arcHeight: 1f);
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
 
-        Assert.AreEqual(5, offsets.Length);
-        for (int i = 1; i < offsets.Length; i++) Assert.AreEqual(0.8f, offsets[i].x - offsets[i - 1].x, 1e-4f);
-        Assert.AreEqual(0f, offsets[0].y, 1e-4f);
-        Assert.AreEqual(0f, offsets[4].y, 1e-4f);
-        Assert.AreEqual(1f, offsets[2].y, 1e-4f, "middle coin is the arc's peak");
+        foreach (float distance in new[] { 0f, 1000f, 5000f })
+        {
+            manager.AddDistance(distance);
+            for (int i = 0; i < 30; i++)
+            {
+                pool.DespawnAll();
+                int spawned = spawner.SpawnCoinsNow();
+                Assert.GreaterOrEqual(spawned, 2, "coins only come in batches");
+                foreach (Transform child in pool.transform)
+                {
+                    if (!child.gameObject.activeSelf || child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() == null) continue;
+                    Assert.GreaterOrEqual(child.position.y, -3.5f - 1e-4f);
+                    Assert.LessOrEqual(child.position.y, 3.5f + 1e-4f);
+                }
+            }
+        }
     }
 
     [Test]
