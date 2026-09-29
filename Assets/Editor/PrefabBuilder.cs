@@ -81,7 +81,7 @@ namespace JetpackRide.EditorTools
                 main.simulationSpace = ParticleSystemSimulationSpace.Local;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.35f);
                 main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 5f);
-                main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.14f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.2f, 0.4f);
                 main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.95f, 0.4f), new Color(1f, 0.5f, 0.1f));
                 main.gravityModifier = 0.5f;
                 var emission = ps.emission;
@@ -97,7 +97,7 @@ namespace JetpackRide.EditorTools
             var sparklePath = BuildParticlePrefab("FX_CoinSparkle", material, "Decals", ps =>
             {
                 ConfigureOneShot(ps, burstCount: 18, lifetime: 0.4f, speed: new ParticleSystem.MinMaxCurve(1.5f, 3.5f),
-                    size: new ParticleSystem.MinMaxCurve(0.08f, 0.18f),
+                    size: new ParticleSystem.MinMaxCurve(0.25f, 0.5f),
                     color: new ParticleSystem.MinMaxGradient(new Color(1f, 0.95f, 0.5f), new Color(1f, 0.8f, 0.2f)));
                 FadeOut(ps, new Color(1f, 0.85f, 0.3f));
             });
@@ -105,7 +105,7 @@ namespace JetpackRide.EditorTools
             var explosionPath = BuildParticlePrefab("FX_Explosion", material, "Player", ps =>
             {
                 ConfigureOneShot(ps, burstCount: 45, lifetime: 0.6f, speed: new ParticleSystem.MinMaxCurve(3f, 8f),
-                    size: new ParticleSystem.MinMaxCurve(0.2f, 0.5f),
+                    size: new ParticleSystem.MinMaxCurve(0.5f, 1.2f),
                     color: new ParticleSystem.MinMaxGradient(new Color(1f, 0.85f, 0.3f), new Color(1f, 0.3f, 0.05f)));
                 FadeOut(ps, new Color(0.35f, 0.1f, 0.05f));
             });
