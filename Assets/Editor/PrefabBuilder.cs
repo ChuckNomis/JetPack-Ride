@@ -235,6 +235,47 @@ namespace JetpackRide.EditorTools
             return material;
         }
 
+        // GDD §6 audio: adds/updates the AudioManager in MainGame with its clips and event sources,
+        // streams the two long music tracks, and makes MainGame the build's only scene.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildAudio
+        [MenuItem("Jetpack Ride/Wire Audio And Build Settings")]
+        public static void BuildAudio()
+        {
+            const string audioDir = "Assets/Audio";
+            foreach (var music in new[] { "Gameplay.wav", "mainmenu.wav" })
+            {
+                var importer = (AudioImporter)AssetImporter.GetAtPath($"{audioDir}/{music}");
+                var settings = importer.defaultSampleSettings;
+                if (settings.loadType == AudioClipLoadType.Streaming) continue;
+                settings.loadType = AudioClipLoadType.Streaming;
+                importer.defaultSampleSettings = settings;
+                importer.SaveAndReimport();
+            }
+
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var audio = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Audio.AudioManager>();
+            if (audio == null) audio = new GameObject("AudioManager").AddComponent<JetpackRide.Audio.AudioManager>();
+
+            var so = new SerializedObject(audio);
+            so.FindProperty("gameManager").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>();
+            so.FindProperty("player").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>();
+            so.FindProperty("spawner").objectReferenceValue = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Spawning.SpawnManager>();
+            AudioClip Clip(string file) => AssetDatabase.LoadAssetAtPath<AudioClip>($"{audioDir}/{file}")
+                ?? throw new InvalidOperationException($"Missing audio clip {audioDir}/{file}");
+            so.FindProperty("menuMusic").objectReferenceValue = Clip("mainmenu.wav");
+            so.FindProperty("gameplayMusic").objectReferenceValue = Clip("Gameplay.wav");
+            so.FindProperty("coinSfx").objectReferenceValue = Clip("right.wav");
+            so.FindProperty("deathSfx").objectReferenceValue = Clip("DiedEletricity.wav");
+            so.FindProperty("rocketLaunchSfx").objectReferenceValue = Clip("367987__chrisbutler99__launch.wav");
+            so.FindProperty("jetpackLoop").objectReferenceValue = Clip("FlyTest.wav");
+            so.ApplyModifiedPropertiesWithoutUndo();
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScenePath, true) };
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Audio wired; build settings set to MainGame.");
+        }
+
         // Adds (or updates) a pool entry on MainGame's ObjectPoolManager and saves the scene.
         private static void RegisterPoolEntry(string id, string prefabPath, int defaultCapacity, int maxSize)
         {

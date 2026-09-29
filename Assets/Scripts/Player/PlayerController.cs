@@ -18,10 +18,12 @@ namespace JetpackRide.Player
         [SerializeField] private GameObject explosionPrefab;
 
         public event System.Action Died;
+        public event System.Action<bool> ThrustingChanged;
 
         private Rigidbody2D body;
         private PlayerInputActions actions;
         private bool pendingThrustHeld;
+        private bool thrusting;
 
         private void Awake()
         {
@@ -63,19 +65,25 @@ namespace JetpackRide.Player
             ClampToPlayBounds();
 
             bool running = gameManager.CurrentState == GameState.Running;
-            UpdateJetpackSpark(running && pendingThrustHeld);
+            SetThrusting(running && pendingThrustHeld);
             if (!running) return;
 
             ApplyThrust(pendingThrustHeld);
         }
 
-        // Driven here rather than in ApplyThrust, which returns early outside Running and would
-        // leave sparks playing after death.
-        private void UpdateJetpackSpark(bool emitting)
+        // Driven from FixedUpdate rather than ApplyThrust, which returns early outside Running and
+        // would leave sparks (and the jetpack sound) running after death.
+        private void SetThrusting(bool value)
         {
-            if (jetpackSpark == null) return;
-            if (emitting && !jetpackSpark.isEmitting) jetpackSpark.Play();
-            else if (!emitting && jetpackSpark.isEmitting) jetpackSpark.Stop();
+            if (jetpackSpark != null)
+            {
+                if (value && !jetpackSpark.isEmitting) jetpackSpark.Play();
+                else if (!value && jetpackSpark.isEmitting) jetpackSpark.Stop();
+            }
+
+            if (value == thrusting) return;
+            thrusting = value;
+            ThrustingChanged?.Invoke(value);
         }
 
         private void ClampToPlayBounds()

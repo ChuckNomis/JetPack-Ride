@@ -25,6 +25,7 @@ namespace JetpackRide.Spawning
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastSpawnedRocketWasHoming { get; private set; }
+        public event System.Action RocketSpawned;
 
         private CancellationTokenSource cts;
 
@@ -128,6 +129,7 @@ namespace JetpackRide.Spawning
             {
                 mover.Configure(pool, RocketPoolId, snapshot.ScrollSpeed * config.RocketSpeedMultiplier, despawnX);
             }
+            RocketSpawned?.Invoke();
         }
     }
 }

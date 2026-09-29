@@ -1743,6 +1743,61 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1331400053}
   m_CullTransparentMesh: 1
+--- !u!1 &1352585789
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1352585791}
+  - component: {fileID: 1352585790}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1352585790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1352585789}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eaff3c04ccebe043a3d4896d26ee318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Audio.AudioManager
+  gameManager: {fileID: 1960459901}
+  player: {fileID: 96190703}
+  spawner: {fileID: 1478857591}
+  menuMusic: {fileID: 8300000, guid: 3fd5ac6f61e28974c9f58c98f6c6c3a9, type: 3}
+  gameplayMusic: {fileID: 8300000, guid: 8f3e2dce0e4ba0a47a6aba8d468aec6d, type: 3}
+  musicVolume: 0.5
+  coinSfx: {fileID: 8300000, guid: 0739a9354f8356544bf5ace38ce42b03, type: 3}
+  deathSfx: {fileID: 8300000, guid: 4215837dd05c9a547856fd42641a345c, type: 3}
+  rocketLaunchSfx: {fileID: 8300000, guid: 2a7534ef59109214c883323d132baabc, type: 3}
+  jetpackLoop: {fileID: 8300000, guid: 077704fd8c1f81a47ac1cf15555950a8, type: 3}
+  sfxVolume: 0.8
+--- !u!4 &1352585791
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1352585789}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1429690368
 GameObject:
   m_ObjectHideFlags: 0
@@ -2670,3 +2725,4 @@ SceneRoots:
   - {fileID: 634703070}
   - {fileID: 260780030}
   - {fileID: 900000003}
+  - {fileID: 1352585791}
