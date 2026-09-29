@@ -764,6 +764,7 @@ MonoBehaviour:
   gameManager: {fileID: 1960459901}
   ScrollSpeedMultiplier: 0.3
   TileWidth: 23.04
+  TileCount: 2
 --- !u!212 &428304945
 SpriteRenderer:
   serializedVersion: 2
@@ -2365,6 +2366,7 @@ MonoBehaviour:
   gameManager: {fileID: 1960459901}
   ScrollSpeedMultiplier: 0.3
   TileWidth: 23.04
+  TileCount: 2
 --- !u!212 &2082415506
 SpriteRenderer:
   serializedVersion: 2

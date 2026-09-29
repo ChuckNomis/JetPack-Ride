@@ -32,4 +32,20 @@ public class ParallaxLayerTests
         Assert.AreEqual(-9.5f, result.x, 0.001f);
         Object.DestroyImmediate(go);
     }
+
+    [Test]
+    public void ComputeWrappedPosition_WithTileCountTwo_WrapsByDoubleTileWidth()
+    {
+        var go = new GameObject("Layer");
+        var layer = go.AddComponent<ParallaxLayer>();
+        layer.ScrollSpeedMultiplier = 1f;
+        layer.TileWidth = 20f;
+        layer.TileCount = 2;
+
+        var result = layer.ComputeWrappedPosition(new Vector3(-19.5f, 0f, 0f), baseScrollSpeed: 10f, deltaTime: 1f);
+
+        // -19.5 - 10 = -29.5, past -TileWidth (-20), wraps by +(TileWidth * TileCount) = +40
+        Assert.AreEqual(10.5f, result.x, 0.001f);
+        Object.DestroyImmediate(go);
+    }
 }

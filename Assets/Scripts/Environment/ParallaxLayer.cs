@@ -8,6 +8,7 @@ namespace JetpackRide.Environment
         [SerializeField] private GameManager gameManager;
         public float ScrollSpeedMultiplier = 1f;
         public float TileWidth = 20f;
+        public int TileCount = 1;
 
         private void Update()
         {
@@ -22,7 +23,7 @@ namespace JetpackRide.Environment
             float moved = current.x - baseScrollSpeed * ScrollSpeedMultiplier * deltaTime;
             if (moved <= -TileWidth)
             {
-                moved += TileWidth;
+                moved += TileWidth * TileCount;
             }
             return new Vector3(moved, current.y, current.z);
         }
