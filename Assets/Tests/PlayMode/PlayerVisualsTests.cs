@@ -261,4 +261,23 @@ public class PlayerVisualsTests
         Assert.AreEqual(90f, Tilt(rig), 0.01f);
         rig.Destroy();
     }
+
+    [UnityTest]
+    public IEnumerator Intro_OnFloor_PlaysRunCycle()
+    {
+        var rig = Build();
+        yield return null;
+        rig.Manager.StartIntro();
+
+        var seen = new System.Collections.Generic.HashSet<Sprite>();
+        for (float t = 0f; t < 0.3f; t += Time.deltaTime)
+        {
+            yield return null;
+            seen.Add(rig.Renderer.sprite);
+        }
+
+        Assert.AreEqual(PlayerPose.Run, rig.Visuals.Pose);
+        Assert.IsFalse(seen.Contains(rig.Fly));
+        rig.Destroy();
+    }
 }

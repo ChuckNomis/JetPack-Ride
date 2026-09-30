@@ -28,6 +28,8 @@ namespace JetpackRide.Audio
         [SerializeField, Range(0f, 1f)] private float deathVolume = 1f;
         [SerializeField] private AudioClip rocketLaunchSfx;
         [SerializeField, Range(0f, 1f)] private float rocketLaunchVolume = 1f;
+        [SerializeField] private AudioClip startExplosionSfx;
+        [SerializeField, Range(0f, 1f)] private float startExplosionVolume = 1f;
         [SerializeField] private AudioClip warningBlinkSfx;
         [SerializeField, Range(0f, 1f)] private float warningBlinkVolume = 1f;
         [SerializeField] private AudioClip footstepSfx;
@@ -107,6 +109,10 @@ namespace JetpackRide.Audio
             {
                 case GameState.GetReady:
                     PlayMusic(menuMusic);
+                    break;
+                case GameState.Intro:
+                    PlayMusic(null);
+                    PlaySfx(startExplosionSfx, startExplosionVolume);
                     break;
                 case GameState.Running:
                     PlayMusic(gameplayMusic);
