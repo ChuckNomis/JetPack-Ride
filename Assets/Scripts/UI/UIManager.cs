@@ -51,6 +51,11 @@ namespace JetpackRide.UI
             {
                 titleHighScoreText.text = $"High Score: {gameManager.HighScore} m";
             }
+            else if (state == GameState.Running)
+            {
+                // CoinsChanged only fires on a pickup, so show this run's (reset) count up front.
+                HandleCoinsChanged(gameManager.CoinsThisRun);
+            }
         }
 
         private void HandleDistanceChanged(float distance)
