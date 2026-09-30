@@ -16,9 +16,6 @@ namespace JetpackRide.Spawning
     // Pure coin batch shapes. Coins only ever come in batches (never a single coin).
     public static class CoinPatterns
     {
-        public const float ShapesUnlockRamp = 0.25f;
-        public const float RectUnlockRamp = 0.5f;
-
         public static CoinPattern Line(int count, float spacing)
         {
             var offsets = new Vector2[Mathf.Max(2, count)];
@@ -81,12 +78,12 @@ namespace JetpackRide.Spawning
             return Build(CoinPatternKind.Rect, offsets);
         }
 
-        // Line/arc early; arrow and box from ShapesUnlockRamp, filled rect from RectUnlockRamp.
-        // random01 picks the kind uniformly among those unlocked; size grows with rampT.
+        // Every kind is available from the start of a run; random01 picks one uniformly and the
+        // size grows with rampT.
         public static CoinPattern Pick(float rampT, float random01, float spacing, float arcHeight)
         {
-            int unlocked = rampT < ShapesUnlockRamp ? 2 : rampT < RectUnlockRamp ? 4 : 5;
-            var kind = (CoinPatternKind)Mathf.Min(unlocked - 1, (int)(random01 * unlocked));
+            const int kinds = 5;
+            var kind = (CoinPatternKind)Mathf.Min(kinds - 1, (int)(random01 * kinds));
             int Size(int min, int max) => Mathf.RoundToInt(Mathf.Lerp(min, max, Mathf.Clamp01(rampT)));
 
             return kind switch
