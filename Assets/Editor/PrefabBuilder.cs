@@ -427,6 +427,42 @@ namespace JetpackRide.EditorTools
             Debug.Log($"[PrefabBuilder] PlayerVisuals wired ({runFrames.Length} run frames).");
         }
 
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WireStartIntro
+        [MenuItem("Jetpack Ride/Wire Start Intro")]
+        public static void WireStartIntro()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var player = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Player.PlayerController>()
+                ?? throw new InvalidOperationException("No PlayerController in " + MainScenePath);
+            var gameManager = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>()
+                ?? throw new InvalidOperationException("No GameManager in " + MainScenePath);
+            var audio = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Audio.AudioManager>()
+                ?? throw new InvalidOperationException("No AudioManager in " + MainScenePath);
+            var camera = UnityEngine.Object.FindAnyObjectByType<Camera>()
+                ?? throw new InvalidOperationException("No Camera in " + MainScenePath);
+
+            // TryGetComponent, not GetComponent + ??: a missing component is a Unity fake-null in the editor.
+            if (!camera.TryGetComponent<JetpackRide.Environment.CameraShake>(out var shake))
+                shake = camera.gameObject.AddComponent<JetpackRide.Environment.CameraShake>();
+            if (!player.TryGetComponent<JetpackRide.Core.IntroSequence>(out var intro))
+                intro = player.gameObject.AddComponent<JetpackRide.Core.IntroSequence>();
+
+            var so = new SerializedObject(intro);
+            so.FindProperty("gameManager").objectReferenceValue = gameManager;
+            so.FindProperty("player").objectReferenceValue = player;
+            so.FindProperty("cameraShake").objectReferenceValue = shake;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/startExplosion1.mp3")
+                ?? throw new InvalidOperationException("Missing Assets/Audio/startExplosion1.mp3");
+            var audioSo = new SerializedObject(audio);
+            audioSo.FindProperty("startExplosionSfx").objectReferenceValue = clip;
+            audioSo.ApplyModifiedPropertiesWithoutUndo();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            Debug.Log("[PrefabBuilder] Start intro wired (IntroSequence, CameraShake, startExplosionSfx).");
+        }
+
         private const string RunFrameDir = SpriteDir + "/PlayerRun";
 
         // Imports PlayerRun_0..n with the same settings as PlayerFly (PPU 100, bilinear, no mips,

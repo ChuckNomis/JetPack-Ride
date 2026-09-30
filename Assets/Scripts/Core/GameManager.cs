@@ -26,12 +26,25 @@ namespace JetpackRide.Core
             HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
         }
 
+        // Title -> intro (IntroSequence plays it, then calls BeginRun). Stats reset here so the HUD
+        // never shows the previous run's numbers once Running starts.
+        public void StartIntro()
+        {
+            ResetRunStats();
+            SetState(GameState.Intro);
+        }
+
         public void BeginRun()
+        {
+            ResetRunStats();
+            SetState(GameState.Running);
+        }
+
+        private void ResetRunStats()
         {
             DistanceMeters = 0f;
             CoinsThisRun = 0;
             Score = 0;
-            SetState(GameState.Running);
         }
 
         public void AddDistance(float deltaMeters)

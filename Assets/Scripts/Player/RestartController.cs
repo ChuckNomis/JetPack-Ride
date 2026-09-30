@@ -84,7 +84,7 @@ namespace JetpackRide.Player
                     gameManager.ReturnToGetReady();
                     break;
                 case GameState.GetReady:
-                    gameManager.BeginRun();
+                    gameManager.StartIntro();
                     break;
             }
         }

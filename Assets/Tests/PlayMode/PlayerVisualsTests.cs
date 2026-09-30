@@ -153,6 +153,32 @@ public class PlayerVisualsTests
     }
 
     [UnityTest]
+    public IEnumerator TitleScreen_HidesPlayer_UntilIntro()
+    {
+        var rig = Build();
+        yield return null;
+        yield return null;
+        Assert.IsFalse(rig.Renderer.enabled, "no player on the title screen at launch");
+
+        rig.Manager.StartIntro();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled, "player appears for the intro");
+
+        rig.Manager.BeginRun();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled);
+
+        rig.Manager.EndRun();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled, "death animation stays visible");
+
+        rig.Manager.ReturnToGetReady();
+        yield return null;
+        Assert.IsFalse(rig.Renderer.enabled, "hidden again back on the title screen");
+        rig.Destroy();
+    }
+
+    [UnityTest]
     public IEnumerator GameOver_LeavesSpriteToDeathAnimation()
     {
         var rig = Build();
@@ -259,6 +285,25 @@ public class PlayerVisualsTests
         for (int i = 0; i < 5; i++) yield return null;
 
         Assert.AreEqual(90f, Tilt(rig), 0.01f);
+        rig.Destroy();
+    }
+
+    [UnityTest]
+    public IEnumerator Intro_OnFloor_PlaysRunCycle()
+    {
+        var rig = Build();
+        yield return null;
+        rig.Manager.StartIntro();
+
+        var seen = new System.Collections.Generic.HashSet<Sprite>();
+        for (float t = 0f; t < 0.3f; t += Time.deltaTime)
+        {
+            yield return null;
+            seen.Add(rig.Renderer.sprite);
+        }
+
+        Assert.AreEqual(PlayerPose.Run, rig.Visuals.Pose);
+        Assert.IsFalse(seen.Contains(rig.Fly));
         rig.Destroy();
     }
 }

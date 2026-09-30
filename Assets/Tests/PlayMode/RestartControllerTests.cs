@@ -58,7 +58,7 @@ public class RestartControllerTests
     }
 
     [UnityTest]
-    public IEnumerator RestartPressed_FromGetReady_BeginsRun()
+    public IEnumerator RestartPressed_FromGetReady_StartsIntro()
     {
         var (controller, manager) = Build(0f);
         yield return null;
@@ -67,7 +67,26 @@ public class RestartControllerTests
         controller.HandleRestartPressed();
         yield return null;
 
-        Assert.AreEqual(GameState.Running, manager.CurrentState);
+        Assert.AreEqual(GameState.Intro, manager.CurrentState);
+        Object.DestroyImmediate(controller.gameObject);
+        Object.DestroyImmediate(manager.gameObject);
+    }
+
+    [UnityTest]
+    public IEnumerator RestartPressed_DuringIntro_IsIgnored()
+    {
+        var (controller, manager) = Build(0f);
+        yield return null;
+        yield return new WaitForSeconds(0.05f);
+        controller.HandleRestartPressed(); // GetReady -> Intro
+
+        int stateChanges = 0;
+        manager.StateChanged += _ => stateChanges++;
+        controller.HandleRestartPressed(); // pressed again mid-intro
+        yield return null;
+
+        Assert.AreEqual(GameState.Intro, manager.CurrentState);
+        Assert.AreEqual(0, stateChanges, "no restart of the intro, no skip to Running");
         Object.DestroyImmediate(controller.gameObject);
         Object.DestroyImmediate(manager.gameObject);
     }

@@ -125,4 +125,24 @@ public class AudioManagerTests
 
         Cleanup(audio, manager);
     }
+
+    [UnityTest]
+    public IEnumerator StartIntro_StopsMusic_PlaysStartExplosion()
+    {
+        var (audio, manager, _, _) = Build();
+        var boom = AudioClip.Create("boom", 441, 1, 44100, false);
+        typeof(AudioManager).GetField("startExplosionSfx", Flags).SetValue(audio, boom);
+        typeof(AudioManager).GetField("startExplosionVolume", Flags).SetValue(audio, 0.7f);
+        yield return null; // GetReady: menu music playing
+
+        manager.StartIntro();
+
+        Assert.IsNull(audio.MusicSource.clip, "menu music stops for the intro");
+        Assert.AreSame(boom, audio.LastSfx);
+        Assert.AreEqual(0.7f, audio.LastSfxVolume, 1e-4f);
+
+        manager.BeginRun();
+        Assert.IsNotNull(audio.MusicSource.clip, "gameplay music starts with the run");
+        Cleanup(audio, manager);
+    }
 }

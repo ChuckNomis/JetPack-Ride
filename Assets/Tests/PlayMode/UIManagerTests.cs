@@ -91,4 +91,17 @@ public class UIManagerTests
 
     private static TMP_Text GetText(UIManager ui, string field) =>
         (TMP_Text)typeof(UIManager).GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(ui);
+
+    [UnityTest]
+    public IEnumerator StartIntro_HidesAllPanels()
+    {
+        var (ui, manager) = Build();
+        yield return null;
+
+        manager.StartIntro();
+
+        Assert.IsFalse(GetPanel(ui, "titlePanel").activeSelf);
+        Assert.IsFalse(GetPanel(ui, "hudPanel").activeSelf);
+        Assert.IsFalse(GetPanel(ui, "gameOverPanel").activeSelf);
+    }
 }

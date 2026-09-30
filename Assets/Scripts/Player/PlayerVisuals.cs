@@ -62,10 +62,13 @@ namespace JetpackRide.Player
         private void LateUpdate()
         {
             var state = gameManager.CurrentState;
+            // No player on the title screen: the first appearance is the intro walk-in.
+            target.enabled = state != GameState.GetReady;
             if (state == GameState.GameOver) return; // PlayerDeathAnimator owns sprite and rotation
 
             bool onFloor = controller.transform.position.y <= controller.MinY + floorEpsilon;
-            Pose = state == GameState.Running && onFloor && !thrusting ? PlayerPose.Run : PlayerPose.Fly;
+            bool walking = state == GameState.Running || state == GameState.Intro; // intro walk-in uses the run cycle
+            Pose = walking && onFloor && !thrusting ? PlayerPose.Run : PlayerPose.Fly;
 
             if (Pose == PlayerPose.Run) ShowRunFrame();
             else ShowFly();
