@@ -21,6 +21,10 @@ namespace JetpackRide.Core
         [Tooltip("1.0 = locked to the background scroll.")]
         [SerializeField] private float zapperSpeedMultiplier = 1f;
 
+        [Header("Coin Speed")]
+        [Tooltip("1.0 = locked to the background scroll. Match Zapper Speed Multiplier to keep coins and zappers together.")]
+        [SerializeField] private float coinSpeedMultiplier = 1f;
+
         [Header("Obstacle Spawning")]
         [SerializeField] private float baseObstacleSpawnInterval = 1.8f;
         [SerializeField] private float minObstacleSpawnInterval = 0.6f;
@@ -55,6 +59,7 @@ namespace JetpackRide.Core
         public float GravityScale => gravityScale;
         public float RocketSpeedMultiplier => rocketSpeedMultiplier;
         public float ZapperSpeedMultiplier => zapperSpeedMultiplier;
+        public float CoinSpeedMultiplier => coinSpeedMultiplier;
         public float BaseObstacleSpawnInterval => baseObstacleSpawnInterval;
         public float MinObstacleSpawnInterval => minObstacleSpawnInterval;
         public float BaseRocketSpawnInterval => baseRocketSpawnInterval;
