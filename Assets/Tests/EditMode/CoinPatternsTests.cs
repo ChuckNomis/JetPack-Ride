@@ -48,19 +48,29 @@ public class CoinPatternsTests
     }
 
     [Test]
-    public void Arc_PeaksInTheMiddle()
+    public void Arc_IsFilledHumpPeakingInTheMiddle()
     {
-        var p = CoinPatterns.Arc(5, S, 1f);
-        Assert.AreEqual(1f, p.Offsets[2].y, 1e-4f);
-        Assert.AreEqual(0f, p.Offsets[0].y, 1e-4f);
-        Assert.AreEqual(1f, p.Bounds.height, 1e-4f);
+        // Column tops 0, 1.13, 1.6, 1.13, 0; each column hangs down from its top in steps of S
+        // -> 1 + 2 + 3 + 2 + 1 coins.
+        var p = CoinPatterns.Arc(5, S, 2 * S);
+        Assert.AreEqual(9, p.Offsets.Length);
+        Assert.AreEqual(4 * S, p.Bounds.width, 1e-4f);
+        Assert.AreEqual(2 * S, p.Bounds.height, 1e-4f);
+
+        var middle = new List<float>();
+        foreach (var o in p.Offsets) if (Mathf.Abs(o.x - 2 * S) < 1e-4f) middle.Add(o.y);
+        middle.Sort();
+        Assert.AreEqual(3, middle.Count);
+        Assert.AreEqual(0f, middle[0], 1e-4f);
+        Assert.AreEqual(S, middle[1], 1e-4f);
+        Assert.AreEqual(2 * S, middle[2], 1e-4f);
     }
 
     [Test]
-    public void Arrow_IsChevronPointingRight()
+    public void Arrow_IsFilledChevronPointingRight()
     {
-        var p = CoinPatterns.Arrow(3, S); // arms of 3 sharing the tip -> 5 coins
-        Assert.AreEqual(5, p.Offsets.Length);
+        var p = CoinPatterns.Arrow(3, S); // filled columns of 5, 3, 1 -> 9 coins
+        Assert.AreEqual(9, p.Offsets.Length);
         Assert.AreEqual(2 * S, p.Bounds.width, 1e-4f);
         Assert.AreEqual(4 * S, p.Bounds.height, 1e-4f);
         // The rightmost coin is the tip, vertically centred.
@@ -70,15 +80,12 @@ public class CoinPatternsTests
     }
 
     [Test]
-    public void Box_IsHollowPerimeter()
+    public void Box_IsFilledGrid()
     {
         var p = CoinPatterns.Box(4, 3, S);
-        Assert.AreEqual(2 * 4 + 2 * (3 - 2), p.Offsets.Length);
-        foreach (var o in p.Offsets)
-        {
-            bool onEdge = Mathf.Abs(o.x) < 1e-4f || Mathf.Abs(o.x - 3 * S) < 1e-4f || Mathf.Abs(o.y) < 1e-4f || Mathf.Abs(o.y - 2 * S) < 1e-4f;
-            Assert.IsTrue(onEdge, $"{o} is inside the box");
-        }
+        Assert.AreEqual(4 * 3, p.Offsets.Length);
+        Assert.AreEqual(3 * S, p.Bounds.width, 1e-4f);
+        Assert.AreEqual(2 * S, p.Bounds.height, 1e-4f);
     }
 
     [Test]
