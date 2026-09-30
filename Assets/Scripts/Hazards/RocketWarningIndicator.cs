@@ -18,6 +18,8 @@ namespace JetpackRide.Hazards
         private bool visualsCaptured;
 
         public bool IsLocked { get; private set; }
+        // Raised each time the lock blink turns red (audio hooks in via SpawnManager).
+        public event System.Action LockBlinked;
 
         public void Configure(ObjectPoolManager pool, string poolId)
         {
@@ -56,9 +58,12 @@ namespace JetpackRide.Hazards
 
             IsLocked = true;
             float lockedY = transform.position.y;
+            bool wasBlinkOn = false;
             for (float t = 0f; t < lockSeconds; t += Time.deltaTime)
             {
                 bool blinkOn = Mathf.Repeat(t * lockBlinkHz, 1f) < 0.5f;
+                if (blinkOn && !wasBlinkOn) LockBlinked?.Invoke();
+                wasBlinkOn = blinkOn;
                 if (spriteRenderer != null) spriteRenderer.color = blinkOn ? lockedTint : baseColor;
                 transform.localScale = baseScale * Mathf.Lerp(1f, lockPulseScale, Mathf.PingPong(t * lockBlinkHz * 2f, 1f));
                 await Awaitable.NextFrameAsync();

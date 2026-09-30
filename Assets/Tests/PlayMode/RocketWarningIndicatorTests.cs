@@ -113,6 +113,30 @@ public class RocketWarningIndicatorTests
     }
 
     [UnityTest]
+    public IEnumerator TrackAndLockAsync_RaisesLockBlinked_OncePerRedFlash()
+    {
+        var (indicator, player, poolGo) = Build(playerY: 0f);
+        yield return null;
+
+        int blinks = 0;
+        indicator.LockBlinked += () => blinks++;
+        bool done = false;
+        RunAsync();
+        async void RunAsync()
+        {
+            await indicator.TrackAndLockAsync(player, 0.05f, lockSeconds: 0.3f, trackSpeed: 1000f, Band);
+            done = true;
+        }
+
+        for (float t = 0f; t < 1f && !done; t += Time.deltaTime) yield return null;
+        Assert.IsTrue(done);
+        Assert.AreEqual(3, blinks, "0.3 s lock at 10 Hz = 3 red flashes");
+        Object.DestroyImmediate(indicator.gameObject);
+        Object.DestroyImmediate(player.gameObject);
+        Object.DestroyImmediate(poolGo);
+    }
+
+    [UnityTest]
     public IEnumerator TrackAndLockAsync_DespawnedMidTrack_LeavesNextPoolReuseAlone()
     {
         var (indicator, player, poolGo) = Build(playerY: 3f);

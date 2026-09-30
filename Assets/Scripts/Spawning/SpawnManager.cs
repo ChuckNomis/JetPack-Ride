@@ -48,6 +48,7 @@ namespace JetpackRide.Spawning
         public bool LastVolleyTracked { get; private set; }
         public event System.Action RocketSpawned;
         public event System.Action<int> RocketVolleyStarted;
+        public event System.Action RocketWarningBlinked;
 
         private CancellationTokenSource cts;
 
@@ -159,12 +160,23 @@ namespace JetpackRide.Spawning
             if (warning.TryGetComponent<RocketWarningIndicator>(out var indicator))
             {
                 indicator.Configure(pool, RocketWarningPoolId);
-                return await indicator.TrackAndLockAsync(player, trackSeconds, config.RocketLockSeconds, config.RocketTrackSpeed, spawnYRange);
+                // Forward blinks only for this use; the pooled indicator is handed out again later.
+                indicator.LockBlinked += RaiseWarningBlinked;
+                try
+                {
+                    return await indicator.TrackAndLockAsync(player, trackSeconds, config.RocketLockSeconds, config.RocketTrackSpeed, spawnYRange);
+                }
+                finally
+                {
+                    if (indicator != null) indicator.LockBlinked -= RaiseWarningBlinked;
+                }
             }
             await Awaitable.WaitForSecondsAsync(trackSeconds + config.RocketLockSeconds, token);
             pool.Despawn(RocketWarningPoolId, warning);
             return startY;
         }
+
+        private void RaiseWarningBlinked() => RocketWarningBlinked?.Invoke();
 
         private async Awaitable RunCoinLoopAsync(CancellationToken token)
         {
