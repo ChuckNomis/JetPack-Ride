@@ -240,7 +240,7 @@ namespace JetpackRide.Spawning
             PruneTracked();
             var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
             var pattern = CoinPatterns.Pick(snapshot.RampProgress01, Random.value, coinSpacing, coinArcHeight);
-            float speed = snapshot.ScrollSpeed;
+            float speed = snapshot.ScrollSpeed * config.CoinSpeedMultiplier;
             float x = spawnPoint.position.x;
 
             // Keep the whole pattern inside the play band.

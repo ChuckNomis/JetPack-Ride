@@ -36,7 +36,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | Script | Attached To | Description |
 |---|---|---|
 | `Core/GameManager` | `GameManager` | Central state machine (`GameState`: `GetReady`/`Running`/`GameOver`). Owns distance, coins, score, and persisted high score (`PlayerPrefs`); fires `StateChanged`/`DistanceChanged`/`CoinsChanged`/`ScoreChanged` events. |
-| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curve, rocket lock-on timing (track/lock seconds, track speed), coin value, restart lockout. |
+| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket, zapper and coin speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curve, rocket lock-on timing (track/lock seconds, track speed), coin value, restart lockout. |
 | `Core/DifficultyEvaluator` | (static, no GameObject) | Pure function mapping distance travelled → a `DifficultySnapshot` (scroll speed, spawn intervals, ramp progress), driven by `GameConfig`'s curves. |
 | `Core/DistanceTracker` | `DistanceTracker` | Ticks `GameManager.AddDistance()` each frame using the current scroll speed while `Running`. |
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
@@ -88,7 +88,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket lock-on track time all scale with distance travelled.
 * Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and fly straight.
 * Rocket lock-on: from the start of a run, every volley has one warning that follows the player's height (capped speed), blinks red for 0.3s as it locks, then the rocket launches straight at the locked height. In a multi-rocket volley the other rockets are fixed: they get the normal 0.5s warning and launch first, so none is dropped and they never form a wall with the tracked one. The track time shrinks from 2s early to 1s at full difficulty (`GameConfig.RocketTrackSeconds`) — that is the rocket difficulty.
-* Zapper speed is independently tunable (`GameConfig.ZapperSpeedMultiplier`; `1.0` = locked to the background).
+* Zapper and coin speeds are independently tunable (`GameConfig.ZapperSpeedMultiplier`, `GameConfig.CoinSpeedMultiplier`; `1.0` = locked to the background). Both are 0.6 so coins and zappers move together.
 * Vertical, horizontal, and ±45° diagonal zappers in three lengths (9-sliced sprite, 4-frame flicker); only vertical early on, and a cluster always leaves a flyable lane (`ZapperLayout`).
 * Coins and zappers keep at least 1 unit apart for as long as both are on screen, even when zappers drift (`SpawnSafety`); coins re-roll their height or skip, zappers shift or evict the coins in their way.
 * Coin collection feeding into score, alongside distance.

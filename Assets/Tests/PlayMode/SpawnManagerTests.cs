@@ -225,6 +225,30 @@ public class SpawnManagerTests
     }
 
     [UnityTest]
+    public IEnumerator SpawnCoinsNow_SpeedIsScrollSpeedTimesCoinMultiplier()
+    {
+        var (spawner, manager, pool) = Build();
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        typeof(GameConfig).GetField("coinSpeedMultiplier", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(config, 0.6f);
+        yield return null;
+        manager.BeginRun();
+
+        pool.DespawnAll();
+        Assert.Greater(spawner.SpawnCoinsNow(), 0);
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        float expected = DifficultyEvaluator.Evaluate(manager.DistanceMeters, config).ScrollSpeed * 0.6f;
+        int checkedCount = 0;
+        foreach (Transform child in pool.transform)
+        {
+            if (!child.gameObject.activeSelf || !child.TryGetComponent<JetpackRide.Pickups.CoinBehaviour>(out _)) continue;
+            Assert.AreEqual(expected, (float)speedField.GetValue(child.GetComponent<JetpackRide.Hazards.HazardMover>()), 1e-4f);
+            checkedCount++;
+        }
+        Assert.Greater(checkedCount, 0);
+    }
+
+    [UnityTest]
     public IEnumerator StateChangedToGameOver_StopsFurtherAutomaticSpawns()
     {
         var (spawner, manager, pool) = Build();
