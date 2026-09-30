@@ -86,6 +86,22 @@ public class UIManagerTests
         StringAssert.Contains("1", finalCoins.text);
     }
 
+    [UnityTest]
+    public IEnumerator BeginRun_ResetsHudCoinCount_BeforeAnyPickup()
+    {
+        var (ui, manager) = Build();
+        yield return null;
+        manager.BeginRun();
+        manager.CollectCoin();
+        manager.CollectCoin();
+        manager.EndRun();
+
+        manager.BeginRun();
+        yield return null;
+
+        Assert.AreEqual("0", GetText(ui, "coinsText").text);
+    }
+
     private static GameObject GetPanel(UIManager ui, string field) =>
         (GameObject)typeof(UIManager).GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(ui);
 
