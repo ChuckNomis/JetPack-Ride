@@ -90,4 +90,44 @@ public class GameManagerTests
         Assert.GreaterOrEqual(manager.HighScore, 1500);
         Object.DestroyImmediate(manager.gameObject);
     }
+
+    [UnityTest]
+    public IEnumerator StartIntro_ResetsStatsAndEntersIntro()
+    {
+        var manager = NewManager();
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(50f);
+        manager.CollectCoin();
+        manager.EndRun();
+        manager.ReturnToGetReady();
+
+        GameState? raised = null;
+        manager.StateChanged += s => raised = s;
+        manager.StartIntro();
+
+        Assert.AreEqual(GameState.Intro, manager.CurrentState);
+        Assert.AreEqual(GameState.Intro, raised);
+        Assert.AreEqual(0f, manager.DistanceMeters);
+        Assert.AreEqual(0, manager.CoinsThisRun);
+        Assert.AreEqual(0, manager.Score);
+        Object.DestroyImmediate(manager.gameObject);
+    }
+
+    [UnityTest]
+    public IEnumerator DuringIntro_DistanceAndCoinsAreIgnored_ThenBeginRunEntersRunning()
+    {
+        var manager = NewManager();
+        yield return null;
+        manager.StartIntro();
+
+        manager.AddDistance(10f);
+        manager.CollectCoin();
+        Assert.AreEqual(0f, manager.DistanceMeters);
+        Assert.AreEqual(0, manager.CoinsThisRun);
+
+        manager.BeginRun();
+        Assert.AreEqual(GameState.Running, manager.CurrentState);
+        Object.DestroyImmediate(manager.gameObject);
+    }
 }
