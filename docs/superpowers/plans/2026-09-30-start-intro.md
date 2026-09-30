@@ -779,7 +779,7 @@ git commit -m "feat: run pose, hidden panels and start-explosion sound during th
 **Files:**
 - Modify: `Assets/Editor/PrefabBuilder.cs` (new menu method after `WirePlayerVisuals`)
 - Modify (generated): `Assets/Scenes/MainGame.unity`
-- Add: `Assets/Audio/startExplosion.mp3`, `Assets/Audio/startExplosion.mp3.meta` (already on disk, untracked)
+- Add: `Assets/Audio/startExplosion1.mp3`, `Assets/Audio/startExplosion1.mp3.meta` (already on disk, untracked)
 - Modify: `README.md`, `docs/superpowers/plans/2026-09-29-game-feel.md` (Task 9.8 status)
 
 **Interfaces:**
@@ -815,8 +815,8 @@ git commit -m "feat: run pose, hidden panels and start-explosion sound during th
             so.FindProperty("cameraShake").objectReferenceValue = shake;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/startExplosion.mp3")
-                ?? throw new InvalidOperationException("Missing Assets/Audio/startExplosion.mp3");
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/startExplosion1.mp3")
+                ?? throw new InvalidOperationException("Missing Assets/Audio/startExplosion1.mp3");
             var audioSo = new SerializedObject(audio);
             audioSo.FindProperty("startExplosionSfx").objectReferenceValue = clip;
             audioSo.ApplyModifiedPropertiesWithoutUndo();
@@ -833,7 +833,7 @@ git commit -m "feat: run pose, hidden panels and start-explosion sound during th
 grep -n "Start intro wired\|Exception" "$OUT/wire.log"
 ```
 
-Expected: exit 0 and the `Start intro wired` line. (With Unity open instead: menu **Jetpack Ride > Wire Start Intro**, then Ctrl+S.) Check `git diff Assets/Scenes/MainGame.unity` shows: an `IntroSequence` MonoBehaviour on the Player with non-zero `gameManager`/`player`/`cameraShake` fileIDs, a `CameraShake` on Main Camera, and `startExplosionSfx: {fileID: 8300000, guid: <startExplosion.mp3.meta guid>, type: 3}` on the AudioManager.
+Expected: exit 0 and the `Start intro wired` line. (With Unity open instead: menu **Jetpack Ride > Wire Start Intro**, then Ctrl+S.) Check `git diff Assets/Scenes/MainGame.unity` shows: an `IntroSequence` MonoBehaviour on the Player with non-zero `gameManager`/`player`/`cameraShake` fileIDs, a `CameraShake` on Main Camera, and `startExplosionSfx: {fileID: 8300000, guid: <startExplosion1.mp3.meta guid>, type: 3}` on the AudioManager.
 
 - [ ] **Step 3: Docs.**
   - `README.md` component table: add rows `Core/IntroSequence` | `Player` | "Observer on `GameManager.StateChanged`: on `Intro`, places the player off-screen left on the floor, shakes the camera, pauses, walks the player in to its home X while the world stands still, then calls `BeginRun()`." and `Environment/CameraShake` | `Main Camera` | "`Shake(seconds, strength)`: fading random jitter, restores the exact rest position (also on disable / overlapping shakes)."; in the `GameManager` row change `GetReady`/`Running`/`GameOver` to `GetReady`/`Intro`/`Running`/`GameOver`; add `Wire Start Intro` to the editor-tooling list; in the AudioManager row mention the start-explosion SFX on `Intro`.
@@ -854,7 +854,7 @@ Expected: both exit 0, `failed="0"`. Then apply the ProjectSettings line-ending 
 - [ ] **Step 6: Commit** (never the font asset):
 
 ```bash
-git add Assets/Editor/PrefabBuilder.cs Assets/Scenes/MainGame.unity Assets/Audio/startExplosion.mp3 Assets/Audio/startExplosion.mp3.meta README.md docs/superpowers/plans/2026-09-29-game-feel.md
+git add Assets/Editor/PrefabBuilder.cs Assets/Scenes/MainGame.unity Assets/Audio/startExplosion1.mp3 Assets/Audio/startExplosion1.mp3.meta README.md docs/superpowers/plans/2026-09-29-game-feel.md
 git status --short   # only the font asset (and nothing else) may remain modified
 git commit -m "feat: wire start intro into MainGame; docs (Task 9.8)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
