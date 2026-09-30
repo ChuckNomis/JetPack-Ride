@@ -98,16 +98,18 @@ public class CoinPatternsTests
     }
 
     [Test]
-    public void Pick_EarlyOnlyLineOrArc_AndAlwaysWellFormed()
+    public void Pick_EveryKindFromTheStart_AndAlwaysWellFormed()
     {
+        var earlyKinds = new HashSet<CoinPatternKind>();
         var rng = new System.Random(3);
         for (int i = 0; i < 500; i++)
         {
             var early = CoinPatterns.Pick(0f, (float)rng.NextDouble(), S, 1.2f);
             AssertWellFormed(early);
-            Assert.IsTrue(early.Kind == CoinPatternKind.Line || early.Kind == CoinPatternKind.Arc, early.Kind.ToString());
+            earlyKinds.Add(early.Kind);
             AssertWellFormed(CoinPatterns.Pick((float)rng.NextDouble(), (float)rng.NextDouble(), S, 1.2f));
         }
+        Assert.AreEqual(5, earlyKinds.Count, "all shapes appear at the start of a run");
     }
 
     [Test]

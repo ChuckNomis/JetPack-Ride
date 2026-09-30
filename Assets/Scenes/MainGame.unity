@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 96190708}
   - component: {fileID: 96190709}
   - component: {fileID: 96190710}
+  - component: {fileID: 96190711}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -323,6 +324,27 @@ MonoBehaviour:
   shakeStrength: 0.3
   pauseSeconds: 0.3
   walkSeconds: 1.2
+--- !u!114 &96190711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96190701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66463a82dc5640f49ac20d343bbb3198, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Player.PlayerShadow
+  controller: {fileID: 96190703}
+  gameManager: {fileID: 1960459901}
+  target: {fileID: 827011996}
+  feetOffset: -0.6
+  groundSize: {x: 0.9, y: 0.22}
+  dotSize: {x: 0.12, y: 0.08}
+  groundAlpha: 0.7
+  dotAlpha: 0.45
+  edgeSoftness: 0.2
 --- !u!1 &147820121
 GameObject:
   m_ObjectHideFlags: 0
@@ -2270,6 +2292,7 @@ MonoBehaviour:
   coinRadius: 0.3
   coinPlacementAttempts: 6
   zapperShiftAttempts: 6
+  maxZapperPush: 10
 --- !u!4 &1478857592
 Transform:
   m_ObjectHideFlags: 0

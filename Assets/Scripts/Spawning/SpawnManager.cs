@@ -41,8 +41,10 @@ namespace JetpackRide.Spawning
         [SerializeField] private float coinRadius = 0.3f;
         [Tooltip("Base-Y candidates tried for a coin batch before skipping it (it would touch a zapper).")]
         [SerializeField] private int coinPlacementAttempts = 6;
-        [Tooltip("Vertical shifts tried for a zapper cluster before it evicts the coins in its way.")]
+        [Tooltip("Vertical shifts tried for a zapper cluster before it is pushed right past the coins in its way.")]
         [SerializeField] private int zapperShiftAttempts = 6;
+        [Tooltip("Furthest a zapper cluster may be pushed right to clear whole coin batches before it evicts them instead.")]
+        [SerializeField] private float maxZapperPush = 10f;
 
         public int ActiveObstacleCount { get; private set; }
         public bool LastVolleyTracked { get; private set; }
@@ -59,6 +61,8 @@ namespace JetpackRide.Spawning
             public HazardMover Mover;
             public Vector2 HalfExtents;
             public float Speed;
+            // Coin batch this coin belongs to (one per SpawnCoinsNow call); unused for zappers.
+            public int Batch;
 
             public Rect Bounds
             {
@@ -72,6 +76,12 @@ namespace JetpackRide.Spawning
 
         private readonly List<Tracked> liveZappers = new();
         private readonly List<Tracked> liveCoins = new();
+        private readonly HashSet<int> batchScratch = new();
+        private int nextBatchId;
+
+        // Extra wait before the next obstacle when the last cluster was pushed right past coins, so
+        // every later cluster keeps its normal distance behind the pushed one. 0 when not pushed.
+        internal float PendingPushSeconds { get; private set; }
 
         // GameManager wiring lives in Start/OnDestroy, not OnEnable/OnDisable, so serialized
         // (or test-injected) references are guaranteed to be assigned before they're read.
@@ -96,6 +106,13 @@ namespace JetpackRide.Spawning
                 RunRocketLoopAsync(cts.Token).Forget();
                 RunCoinLoopAsync(cts.Token).Forget();
             }
+            else if (state == GameState.GameOver)
+            {
+                // The world freezes while the player goes down; zappers and coins stop with it.
+                PruneTracked();
+                foreach (var zapper in liveZappers) zapper.Mover.Frozen = true;
+                foreach (var coin in liveCoins) coin.Mover.Frozen = true;
+            }
         }
 
         private async Awaitable RunObstacleLoopAsync(CancellationToken token)
@@ -103,7 +120,7 @@ namespace JetpackRide.Spawning
             while (!token.IsCancellationRequested)
             {
                 var snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
-                await Awaitable.WaitForSecondsAsync(snapshot.ObstacleSpawnInterval, token);
+                await Awaitable.WaitForSecondsAsync(snapshot.ObstacleSpawnInterval + PendingPushSeconds, token);
                 if (token.IsCancellationRequested) break;
                 SpawnObstacleNow();
             }
@@ -232,7 +249,7 @@ namespace JetpackRide.Spawning
             return ys;
         }
 
-        // Coins only come in batches (CoinPatterns); bigger and more varied shapes later in a run.
+        // Coins only come in batches (CoinPatterns); every shape from the start, bigger later in a run.
         // A batch is placed clear of every live zapper (CoinZapperClearance, including drift); if no
         // candidate height works it is skipped. Returns the number of coins spawned.
         internal int SpawnCoinsNow()
@@ -257,6 +274,7 @@ namespace JetpackRide.Spawning
             }
             if (baseY == null) return 0;
 
+            int batch = nextBatchId++;
             foreach (var offset in pattern.Offsets)
             {
                 var pos = new Vector3(x + offset.x, baseY.Value + offset.y, 0f);
@@ -264,7 +282,7 @@ namespace JetpackRide.Spawning
                 if (instance.TryGetComponent<HazardMover>(out var mover))
                 {
                     mover.Configure(pool, CoinPoolId, speed, despawnX);
-                    liveCoins.Add(new Tracked { Mover = mover, HalfExtents = new Vector2(coinRadius, coinRadius), Speed = speed });
+                    liveCoins.Add(new Tracked { Mover = mover, HalfExtents = new Vector2(coinRadius, coinRadius), Speed = speed, Batch = batch });
                 }
             }
             return pattern.Offsets.Length;
@@ -308,11 +326,13 @@ namespace JetpackRide.Spawning
             for (int i = 0; i < cluster.Length; i++)
                 extents[i] = ZapperLayout.WorldExtents(cluster[i].Orientation, cluster[i].Length, zapperThickness);
 
-            // Coins must never touch zappers. First try shifting the whole cluster vertically (only
-            // to heights that keep the lane); if nothing is clear, hazards win and the coins in the
-            // way are removed, so difficulty never drops because of coins.
-            float dy = 0f;
-            bool clear = ClusterClearOfCoins(cluster, extents, 0f, speed);
+            // Coins must never touch zappers, and coin batches are never cut. First try shifting the
+            // whole cluster vertically (only to heights that keep the lane), then pushing it right past
+            // the batches in its way (the next obstacle waits the same extra time, so zapper spacing is
+            // kept). If nothing is clear, hazards win and the whole batches in the way are removed, so
+            // difficulty never drops because of coins.
+            float dy = 0f, dx = 0f;
+            bool clear = ClusterClearOfCoins(cluster, extents, 0f, 0f, speed);
             if (!clear)
             {
                 float minLo = float.MaxValue, maxHi = float.MinValue;
@@ -329,14 +349,20 @@ namespace JetpackRide.Spawning
                     for (int i = 0; i < cluster.Length; i++)
                         spans.Add(new Vector2(cluster[i].Center.y + candidate - extents[i].y, cluster[i].Center.y + candidate + extents[i].y));
                     if (ZapperLayout.LargestGap(spans, spawnYRange) < MinZapperLane) continue;
-                    if (ClusterClearOfCoins(cluster, extents, candidate, speed)) { dy = candidate; clear = true; }
+                    if (ClusterClearOfCoins(cluster, extents, candidate, 0f, speed)) { dy = candidate; clear = true; }
                 }
             }
+            if (!clear)
+            {
+                dx = PushPastCoinBatches(cluster, extents, speed);
+                clear = dx > 0f;
+            }
+            PendingPushSeconds = dx > 0f && speed > 0f ? dx / speed : 0f;
 
             for (int i = 0; i < cluster.Length; i++)
             {
                 var zapper = cluster[i];
-                var pos = new Vector3(spawnPoint.position.x + zapper.Center.x, zapper.Center.y + dy, 0f);
+                var pos = new Vector3(spawnPoint.position.x + zapper.Center.x + dx, zapper.Center.y + dy, 0f);
                 var rotation = Quaternion.Euler(0f, 0f, ZapperLayout.AngleDegrees(zapper.Orientation));
                 var instance = pool.Spawn(ObstaclePoolId, pos, rotation);
                 if (instance.TryGetComponent<ZapperShape>(out var shape)) shape.Configure(zapper.Orientation, zapper.Length);
@@ -346,30 +372,72 @@ namespace JetpackRide.Spawning
                     mover.Configure(pool, ObstaclePoolId, speed, despawnX);
                     var tracked = new Tracked { Mover = mover, HalfExtents = extents[i], Speed = speed };
                     liveZappers.Add(tracked);
-                    if (!clear) EvictCoinsNear(tracked);
+                    if (!clear) EvictBatchesNear(tracked);
                 }
                 ActiveObstacleCount++;
             }
         }
 
-        private bool ClusterClearOfCoins(ZapperPlacement[] cluster, Vector2[] extents, float dy, float speed)
+        private Rect ClusterRect(ZapperPlacement zapper, Vector2 extents, float dx, float dy)
+        {
+            var center = new Vector2(spawnPoint.position.x + zapper.Center.x + dx, zapper.Center.y + dy);
+            return new Rect(center - extents, 2f * extents);
+        }
+
+        private bool ClusterClearOfCoins(ZapperPlacement[] cluster, Vector2[] extents, float dy, float dx, float speed)
         {
             for (int i = 0; i < cluster.Length; i++)
-            {
-                var center = new Vector2(spawnPoint.position.x + cluster[i].Center.x, cluster[i].Center.y + dy);
-                if (ConflictsWith(liveCoins, new Rect(center - extents[i], 2f * extents[i]), speed)) return false;
-            }
+                if (ConflictsWith(liveCoins, ClusterRect(cluster[i], extents[i], dx, dy), speed)) return false;
             return true;
         }
 
-        private void EvictCoinsNear(Tracked zapper)
+        // Smallest rightward push (at the planned height) that puts the cluster clear of every whole
+        // coin batch it would touch, or 0 if none within maxZapperPush works. A batch the cluster
+        // overlaps is jumped in one go; a batch already ahead of it (on screen) only conflicts because
+        // the later-spawned zapper is slightly faster (scroll speed grows during a run) and would catch
+        // up with it, so the cluster is nudged right in small steps until that closing gap is covered.
+        private float PushPastCoinBatches(ZapperPlacement[] cluster, Vector2[] extents, float speed)
         {
-            var bounds = zapper.Bounds;
+            const float nudge = 0.25f;
+            float clusterMinX = float.MaxValue;
+            for (int i = 0; i < cluster.Length; i++)
+                clusterMinX = Mathf.Min(clusterMinX, ClusterRect(cluster[i], extents[i], 0f, 0f).xMin);
+
+            float dx = 0f;
+            while (true)
+            {
+                batchScratch.Clear();
+                for (int i = 0; i < cluster.Length; i++)
+                    CollectConflictingBatches(ClusterRect(cluster[i], extents[i], dx, 0f), speed, batchScratch);
+                if (batchScratch.Count == 0) return dx;
+
+                float batchMaxX = float.MinValue;
+                foreach (var coin in liveCoins)
+                    if (batchScratch.Contains(coin.Batch)) batchMaxX = Mathf.Max(batchMaxX, coin.Bounds.xMax);
+                float next = Mathf.Max(batchMaxX + CoinZapperClearance + 1e-3f - clusterMinX, dx + nudge);
+                if (next > maxZapperPush) return 0f;
+                dx = next;
+            }
+        }
+
+        private void CollectConflictingBatches(Rect rect, float speed, HashSet<int> batches)
+        {
+            foreach (var coin in liveCoins)
+                if (SpawnSafety.WillOverlap(rect, speed, coin.Bounds, coin.Speed, CoinZapperClearance, despawnX))
+                    batches.Add(coin.Batch);
+        }
+
+        // Removes every coin of each batch this zapper would touch, never just the touching coins,
+        // so no half shapes are left on screen.
+        private void EvictBatchesNear(Tracked zapper)
+        {
+            batchScratch.Clear();
+            CollectConflictingBatches(zapper.Bounds, zapper.Speed, batchScratch);
+            if (batchScratch.Count == 0) return;
             for (int i = liveCoins.Count - 1; i >= 0; i--)
             {
-                var coin = liveCoins[i];
-                if (!SpawnSafety.WillOverlap(bounds, zapper.Speed, coin.Bounds, coin.Speed, CoinZapperClearance, despawnX)) continue;
-                coin.Mover.Despawn();
+                if (!batchScratch.Contains(liveCoins[i].Batch)) continue;
+                liveCoins[i].Mover.Despawn();
                 liveCoins.RemoveAt(i);
             }
         }

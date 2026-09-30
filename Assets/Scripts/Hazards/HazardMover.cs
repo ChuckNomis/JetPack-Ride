@@ -11,6 +11,8 @@ namespace JetpackRide.Hazards
         private float despawnX;
 
         public bool HasDespawned { get; private set; }
+        // Stops scrolling (e.g. while the world is frozen on game over); cleared on every spawn.
+        public bool Frozen { get; set; }
 
         public void Configure(ObjectPoolManager pool, string poolId, float speed, float despawnX)
         {
@@ -22,6 +24,7 @@ namespace JetpackRide.Hazards
 
         private void FixedUpdate()
         {
+            if (Frozen) return;
             transform.position += Vector3.left * speed * Time.fixedDeltaTime;
 
             if (transform.position.x <= despawnX) Despawn();
@@ -40,6 +43,7 @@ namespace JetpackRide.Hazards
         public void OnSpawned()
         {
             HasDespawned = false;
+            Frozen = false;
         }
 
         public void OnDespawned()

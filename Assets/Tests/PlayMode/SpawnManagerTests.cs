@@ -261,6 +261,37 @@ public class SpawnManagerTests
 
         Assert.AreEqual(before, spawner.ActiveObstacleCount);
     }
+
+    [UnityTest]
+    public IEnumerator GameOver_FreezesZappersAndCoins_UntilRespawned()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+        spawner.SpawnObstacleNow();
+        spawner.SpawnCoinsNow();
+        yield return new WaitForFixedUpdate();
+        manager.EndRun();
+
+        var before = new System.Collections.Generic.Dictionary<Transform, Vector3>();
+        foreach (Transform child in pool.transform)
+            if (child.gameObject.activeSelf) before[child] = child.position;
+        Assert.Greater(before.Count, 1);
+        yield return new WaitForSeconds(0.2f);
+
+        foreach (var pair in before)
+            Assert.AreEqual(pair.Value, pair.Key.position, $"{pair.Key.name} kept moving after game over");
+
+        // Pooled objects handed out again scroll normally.
+        pool.DespawnAll();
+        manager.ReturnToGetReady();
+        manager.BeginRun();
+        spawner.SpawnObstacleNow();
+        foreach (Transform child in pool.transform)
+            if (child.gameObject.activeSelf)
+                Assert.IsFalse(child.GetComponent<JetpackRide.Hazards.HazardMover>().Frozen, "respawned object must not stay frozen");
+    }
+
     [UnityTest]
     public IEnumerator SpawnObstacleNow_HighRampCluster_LeavesFlyableLane_AndMixesOrientations()
     {
@@ -375,6 +406,108 @@ public class SpawnManagerTests
                         $"trial {trial}: coin {c.rect} vs zapper {z.rect}");
         }
         Assert.Greater(trialsWithBoth, 10, "coins still spawn alongside zappers most of the time");
+    }
+
+    private static int ActiveCoins(ObjectPoolManager pool)
+    {
+        int active = 0;
+        foreach (Transform child in pool.transform)
+            if (child.gameObject.activeSelf && child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null) active++;
+        return active;
+    }
+
+    [UnityTest]
+    public IEnumerator ForcedOverlap_CoinBatchesStayWhole([Values(0.7f, 1f, 1.3f)] float zapperMultiplier)
+    {
+        var (spawner, manager, pool) = Build();
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        typeof(GameConfig).GetField("zapperSpeedMultiplier", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(config, zapperMultiplier);
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(5000f);
+
+        for (int trial = 0; trial < 60; trial++)
+        {
+            pool.DespawnAll();
+            int spawned = spawner.SpawnCoinsNow();
+            spawner.SpawnObstacleNow();
+            int active = ActiveCoins(pool);
+            Assert.IsTrue(active == 0 || active == spawned, $"trial {trial}: {active} of {spawned} coins left, a batch was cut");
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator OnScreenBatchAhead_FasterLaterZapper_IsNotEvicted()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+        float coinRadius = (float)typeof(SpawnManager).GetField("coinRadius", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+
+        for (int trial = 0; trial < 30; trial++)
+        {
+            pool.DespawnAll();
+            manager.BeginRun(); // distance back to 0: coins get the slower early speed
+            int spawned = spawner.SpawnCoinsNow();
+
+            // Slide the batch on screen so its tail sits just past clearance ahead of the zapper spawn (x=12).
+            float coinMaxX = float.MinValue;
+            foreach (Transform child in pool.transform)
+                if (child.gameObject.activeSelf && child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null)
+                    coinMaxX = Mathf.Max(coinMaxX, child.position.x + coinRadius);
+            float shift = 12f - SpawnManager.CoinZapperClearance - 0.05f - coinMaxX;
+            foreach (Transform child in pool.transform)
+                if (child.gameObject.activeSelf && child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null)
+                    child.position += new Vector3(shift, 0f, 0f);
+
+            // Later in the run the scroll speed is higher, so the new zapper would catch up with the batch.
+            manager.AddDistance(100f);
+            spawner.SpawnObstacleNow();
+            Assert.AreEqual(spawned, ActiveCoins(pool), $"trial {trial}: on-screen batch was removed");
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator ForcedOverlap_EqualSpeeds_PushesZapperPastWholeBatch_AndDelaysNextObstacle()
+    {
+        var (spawner, manager, pool) = Build();
+        yield return null;
+        manager.BeginRun();
+        manager.AddDistance(5000f);
+
+        var speedField = typeof(JetpackRide.Hazards.HazardMover).GetField("speed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        float coinRadius = (float)typeof(SpawnManager).GetField("coinRadius", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spawner);
+        int pushes = 0;
+        for (int trial = 0; trial < 60; trial++)
+        {
+            pool.DespawnAll();
+            int spawned = spawner.SpawnCoinsNow();
+            spawner.SpawnObstacleNow();
+            Physics2D.SyncTransforms();
+            Assert.AreEqual(spawned, ActiveCoins(pool), $"trial {trial}: equal speeds never need to evict coins");
+
+            if (spawner.PendingPushSeconds <= 0f) continue;
+            pushes++;
+            float coinMaxX = float.MinValue, zapperMinX = float.MaxValue, zapperSpeed = 0f;
+            foreach (Transform child in pool.transform)
+            {
+                if (!child.gameObject.activeSelf) continue;
+                if (child.GetComponent<JetpackRide.Pickups.CoinBehaviour>() != null)
+                    coinMaxX = Mathf.Max(coinMaxX, child.position.x + coinRadius);
+                else if (child.TryGetComponent<BoxCollider2D>(out var box))
+                {
+                    zapperMinX = Mathf.Min(zapperMinX, box.bounds.min.x);
+                    zapperSpeed = (float)speedField.GetValue(child.GetComponent<JetpackRide.Hazards.HazardMover>());
+                }
+            }
+            Assert.GreaterOrEqual(zapperMinX, coinMaxX + SpawnManager.CoinZapperClearance - 1e-3f, $"trial {trial}: pushed past the whole batch");
+            // The cluster's layout left edge sits at the spawn point (x=12) plus the push; the beam's real
+            // collider is at most as wide as the layout, so its left edge is at or right of that.
+            float pushedUnits = spawner.PendingPushSeconds * zapperSpeed;
+            Assert.LessOrEqual(pushedUnits, zapperMinX - 12f + 1e-3f, $"trial {trial}: delay matches the push");
+            Assert.Greater(pushedUnits, zapperMinX - 12f - 1f, $"trial {trial}: delay covers the whole push");
+        }
+        Assert.Greater(pushes, 0, "forced overlaps push the zapper at least once");
     }
 
     [Test]

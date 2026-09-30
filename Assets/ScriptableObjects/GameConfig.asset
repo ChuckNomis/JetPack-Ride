@@ -18,8 +18,8 @@ MonoBehaviour:
   jetpackThrust: 70
   gravityScale: 4
   rocketSpeedMultiplier: 1.5
-  zapperSpeedMultiplier: 0.6
-  coinSpeedMultiplier: 0.6
+  zapperSpeedMultiplier: 0.5
+  coinSpeedMultiplier: 0.5
   baseObstacleSpawnInterval: 1.8
   minObstacleSpawnInterval: 0.6
   baseRocketSpawnInterval: 4
