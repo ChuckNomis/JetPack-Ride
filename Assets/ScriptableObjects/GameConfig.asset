@@ -12,12 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4eb2c5c65e5decc4d980170e5337ac67, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: Assembly-CSharp::JetpackRide.Core.GameConfig
-  baseScrollSpeed: 12
+  baseScrollSpeed: 15
   scrollSpeedPerMeter: 0.005
   maxScrollSpeed: 26
   jetpackThrust: 80
   gravityScale: 4
-  zapperSpeedMultiplier: 1
+  rocketSpeedMultiplier: 1.5
+  zapperSpeedMultiplier: 0.6
   baseObstacleSpawnInterval: 1.8
   minObstacleSpawnInterval: 0.6
   baseRocketSpawnInterval: 4
@@ -65,5 +66,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  rocketTrackSecondsEarly: 2
+  rocketTrackSecondsLate: 1
+  rocketLockSeconds: 0.3
+  rocketTrackSpeed: 4
   coinValue: 5
   restartLockoutSeconds: 1

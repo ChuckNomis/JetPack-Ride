@@ -69,6 +69,50 @@ public class AudioManagerTests
     }
 
     [UnityTest]
+    public IEnumerator WarningBlink_PlaysWarningBlinkSfx()
+    {
+        var (audio, manager, _, _) = Build();
+        var blinkClip = AudioClip.Create("blink", 441, 1, 44100, false);
+        typeof(AudioManager).GetField("warningBlinkSfx", Flags).SetValue(audio, blinkClip);
+        yield return null;
+
+        typeof(AudioManager).GetMethod("HandleWarningBlinked", Flags).Invoke(audio, null);
+        Assert.AreSame(blinkClip, audio.LastSfx);
+
+        Cleanup(audio, manager);
+    }
+
+    [UnityTest]
+    public IEnumerator RocketLaunch_UsesItsOwnVolume()
+    {
+        var (audio, manager, _, _) = Build();
+        var rocketClip = AudioClip.Create("rocket", 441, 1, 44100, false);
+        typeof(AudioManager).GetField("rocketLaunchSfx", Flags).SetValue(audio, rocketClip);
+        typeof(AudioManager).GetField("rocketLaunchVolume", Flags).SetValue(audio, 0.5f);
+        yield return null;
+
+        typeof(AudioManager).GetMethod("HandleRocketSpawned", Flags).Invoke(audio, null);
+        Assert.AreSame(rocketClip, audio.LastSfx);
+        Assert.AreEqual(0.5f, audio.LastSfxVolume, 1e-4f);
+
+        Cleanup(audio, manager);
+    }
+
+    [UnityTest]
+    public IEnumerator Footstep_PlaysFootstepSfx()
+    {
+        var (audio, manager, _, _) = Build();
+        var stepClip = AudioClip.Create("step", 441, 1, 44100, false);
+        typeof(AudioManager).GetField("footstepSfx", Flags).SetValue(audio, stepClip);
+        yield return null;
+
+        typeof(AudioManager).GetMethod("HandleFootstep", Flags).Invoke(audio, null);
+        Assert.AreSame(stepClip, audio.LastSfx);
+
+        Cleanup(audio, manager);
+    }
+
+    [UnityTest]
     public IEnumerator JetpackLoop_TracksThrusting()
     {
         var (audio, manager, _, _) = Build();

@@ -89,6 +89,29 @@ public class PlayerVisualsTests
     }
 
     [UnityTest]
+    public IEnumerator RunCycle_RaisesFootstep_OnlyOnFootstepFrames()
+    {
+        var rig = Build();
+        typeof(PlayerVisuals).GetField("footstepFrames", Flags).SetValue(rig.Visuals, new[] { 0, 2 });
+        var stepSprites = new System.Collections.Generic.List<Sprite>();
+        rig.Visuals.Footstep += () => stepSprites.Add(rig.Renderer.sprite);
+        yield return null;
+        rig.Manager.BeginRun();
+
+        for (float t = 0f; t < 0.5f; t += Time.deltaTime) yield return null;
+
+        Assert.Greater(stepSprites.Count, 1, "steps while running");
+        foreach (var s in stepSprites)
+            Assert.IsTrue(s == rig.RunFrames[0] || s == rig.RunFrames[2], "step only lands on a footstep frame");
+
+        stepSprites.Clear();
+        rig.Thrust(true);
+        for (float t = 0f; t < 0.3f; t += Time.deltaTime) yield return null;
+        Assert.AreEqual(0, stepSprites.Count, "no steps while flying");
+        rig.Destroy();
+    }
+
+    [UnityTest]
     public IEnumerator Thrusting_ShowsFlySprite()
     {
         var rig = Build();

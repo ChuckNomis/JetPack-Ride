@@ -17,6 +17,8 @@ namespace JetpackRide.Player
         [SerializeField] private SpriteRenderer target;
         [SerializeField] private Sprite[] runFrames;
         [SerializeField] private float runFps = 12f;
+        [Tooltip("Run-cycle frame indices where a foot hits the floor; each raises Footstep.")]
+        [SerializeField] private int[] footstepFrames = { 0, 4 };
         [SerializeField] private float floorEpsilon = 0.05f;
         [SerializeField] private float fallbackBobHeight = 0.04f;
         [SerializeField] private float fallbackBobHz = 6f;
@@ -33,8 +35,10 @@ namespace JetpackRide.Player
         private Vector3 targetRestLocalPosition;
         private bool thrusting;
         private float runClock;
+        private int lastRunFrame = -1;
 
         public PlayerPose Pose { get; private set; }
+        public event System.Action Footstep;
 
         // Wiring in Start/OnDestroy so serialized (or test-injected) references are assigned first.
         private void Start()
@@ -76,6 +80,8 @@ namespace JetpackRide.Player
             {
                 int index = (int)(runClock * runFps) % runFrames.Length;
                 target.sprite = runFrames[index] != null ? runFrames[index] : flySprite;
+                if (index != lastRunFrame && System.Array.IndexOf(footstepFrames, index) >= 0) Footstep?.Invoke();
+                lastRunFrame = index;
                 return;
             }
 
@@ -90,6 +96,7 @@ namespace JetpackRide.Player
         private void ShowFly()
         {
             runClock = 0f;
+            lastRunFrame = -1;
             target.sprite = flySprite;
             if (HasChildVisual) target.transform.localPosition = targetRestLocalPosition;
         }
