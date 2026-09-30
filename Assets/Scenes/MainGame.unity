@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 96190702}
   - component: {fileID: 96190708}
   - component: {fileID: 96190709}
+  - component: {fileID: 96190710}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -302,6 +303,26 @@ MonoBehaviour:
   maxFallTilt: 12
   fallTiltVelocity: 6
   tiltSpeed: 90
+--- !u!114 &96190710
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96190701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d2bb05786356eb4e89982f5a7dcb955, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Core.IntroSequence
+  gameManager: {fileID: 1960459901}
+  player: {fileID: 96190703}
+  cameraShake: {fileID: 148516772}
+  startX: -11
+  shakeSeconds: 0.4
+  shakeStrength: 0.3
+  pauseSeconds: 0.3
+  walkSeconds: 1.2
 --- !u!1 &147820121
 GameObject:
   m_ObjectHideFlags: 0
@@ -392,6 +413,7 @@ GameObject:
   - component: {fileID: 148516769}
   - component: {fileID: 148516768}
   - component: {fileID: 148516771}
+  - component: {fileID: 148516772}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -517,6 +539,18 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &148516772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 148516767}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 080a7a05fbf888849a46cda7e5528b9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Environment.CameraShake
 --- !u!1 &237644441
 GameObject:
   m_ObjectHideFlags: 0
@@ -1870,6 +1904,8 @@ MonoBehaviour:
   deathVolume: 1
   rocketLaunchSfx: {fileID: 8300000, guid: 2a7534ef59109214c883323d132baabc, type: 3}
   rocketLaunchVolume: 0.6
+  startExplosionSfx: {fileID: 8300000, guid: aed923a1856a10943945740933eee571, type: 3}
+  startExplosionVolume: 1
   warningBlinkSfx: {fileID: 8300000, guid: 28c917dac97b4c389005c43d07c98245, type: 3}
   warningBlinkVolume: 1
   footstepSfx: {fileID: 8300000, guid: 0b397472b7564e8091afc6e4b3fd1d37, type: 3}
