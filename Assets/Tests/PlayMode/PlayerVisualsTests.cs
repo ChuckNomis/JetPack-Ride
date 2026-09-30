@@ -153,6 +153,32 @@ public class PlayerVisualsTests
     }
 
     [UnityTest]
+    public IEnumerator TitleScreen_HidesPlayer_UntilIntro()
+    {
+        var rig = Build();
+        yield return null;
+        yield return null;
+        Assert.IsFalse(rig.Renderer.enabled, "no player on the title screen at launch");
+
+        rig.Manager.StartIntro();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled, "player appears for the intro");
+
+        rig.Manager.BeginRun();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled);
+
+        rig.Manager.EndRun();
+        yield return null;
+        Assert.IsTrue(rig.Renderer.enabled, "death animation stays visible");
+
+        rig.Manager.ReturnToGetReady();
+        yield return null;
+        Assert.IsFalse(rig.Renderer.enabled, "hidden again back on the title screen");
+        rig.Destroy();
+    }
+
+    [UnityTest]
     public IEnumerator GameOver_LeavesSpriteToDeathAnimation()
     {
         var rig = Build();
