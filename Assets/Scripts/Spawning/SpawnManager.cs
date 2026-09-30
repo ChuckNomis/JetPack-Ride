@@ -47,6 +47,7 @@ namespace JetpackRide.Spawning
         public int ActiveObstacleCount { get; private set; }
         public bool LastVolleyTracked { get; private set; }
         public event System.Action RocketSpawned;
+        public event System.Action<int> RocketVolleyStarted;
 
         private CancellationTokenSource cts;
 
@@ -119,32 +120,36 @@ namespace JetpackRide.Spawning
                 snapshot = DifficultyEvaluator.Evaluate(gameManager.DistanceMeters, config);
                 int volley = DetermineRocketVolleySize(gameManager.DistanceMeters, Random.value, rocketPairsFromMeters, rocketTriplesFromMeters);
                 var ys = PickVolleyYs(volley, spawnYRange, MinRocketPairGap, () => Random.value);
+                RocketVolleyStarted?.Invoke(ys.Length);
 
-                // Lock-on: in a tracked volley only the first rocket's warning follows the player
-                // (two trackers would converge into one); the rest keep their fixed heights.
-                bool tracked = player != null && Random.value < snapshot.RocketAggression;
+                // Lock-on: every volley tracks from the start of a run; difficulty comes from the
+                // track time shrinking (GameConfig.RocketTrackSeconds). Only the first rocket's warning
+                // follows the player (two trackers would converge into one); the rest are fixed.
+                bool tracked = player != null;
                 LastVolleyTracked = tracked;
-                if (!tracked)
+                int fixedFrom = tracked ? 1 : 0;
+                Awaitable<float> trackTask = null;
+                if (tracked)
                 {
-                    foreach (float y in ys) ShowWarning(y, warningLeadSeconds);
+                    float trackSeconds = config.RocketTrackSeconds(snapshot.RampProgress01);
+                    trackTask = TrackWarningAsync(ys[0], trackSeconds, token);
+                }
+
+                // Fixed rockets keep the normal warning lead and launch before the tracker locks, so
+                // they never line up with it into a wall and none has to be dropped.
+                if (ys.Length > fixedFrom)
+                {
+                    for (int i = fixedFrom; i < ys.Length; i++) ShowWarning(ys[i], warningLeadSeconds);
                     await Awaitable.WaitForSecondsAsync(warningLeadSeconds, token);
                     if (token.IsCancellationRequested) break;
-                    foreach (float y in ys) SpawnRocketNow(y);
-                    continue;
+                    for (int i = fixedFrom; i < ys.Length; i++) SpawnRocketNow(ys[i]);
                 }
 
-                float trackSeconds = config.RocketTrackSeconds(snapshot.RampProgress01);
-                for (int i = 1; i < ys.Length; i++) ShowWarning(ys[i], trackSeconds + config.RocketLockSeconds);
-                float lockedY = await TrackWarningAsync(ys[0], trackSeconds, token);
+                if (!tracked) continue;
+                float lockedY = await trackTask;
                 if (token.IsCancellationRequested) break;
                 if (float.IsNaN(lockedY)) continue;
-
                 SpawnRocketNow(lockedY);
-                // The tracker may have moved next to a fixed rocket; drop any that would close the lane.
-                for (int i = 1; i < ys.Length; i++)
-                {
-                    if (Mathf.Abs(ys[i] - lockedY) >= MinRocketPairGap) SpawnRocketNow(ys[i]);
-                }
             }
         }
 

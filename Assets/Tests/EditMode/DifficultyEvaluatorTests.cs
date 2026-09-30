@@ -61,4 +61,18 @@ public class DifficultyEvaluatorTests
         Assert.AreEqual(0f, snapshot.RampProgress01, 0.001f);
         Assert.AreEqual(config.BaseObstacleSpawnInterval, snapshot.ObstacleSpawnInterval, 0.001f);
     }
+
+    [Test]
+    public void RocketTrackSeconds_ShrinksAsRunProgresses()
+    {
+        var config = NewConfig();
+        float early = config.RocketTrackSeconds(DifficultyEvaluator.Evaluate(0f, config).RampProgress01);
+        float mid = config.RocketTrackSeconds(DifficultyEvaluator.Evaluate(config.DifficultyRampDistance * 0.5f, config).RampProgress01);
+        float late = config.RocketTrackSeconds(DifficultyEvaluator.Evaluate(config.DifficultyRampDistance, config).RampProgress01);
+
+        Assert.AreEqual(2f, early, 0.001f);
+        Assert.AreEqual(1f, late, 0.001f);
+        Assert.Less(mid, early);
+        Assert.Greater(mid, late);
+    }
 }

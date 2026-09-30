@@ -85,7 +85,7 @@ public class SpawnManagerTests
     }
 
     [UnityTest]
-    public IEnumerator RocketLoop_TrackedVolley_LaunchesAtLockedPlayerY()
+    public IEnumerator RocketLoop_FromRunStart_EveryVolleyLaunchesAtLockedPlayerY()
     {
         var (spawner, manager, pool) = Build();
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
@@ -97,7 +97,6 @@ public class SpawnManagerTests
         Set("rocketTrackSecondsLate", 0.2f);
         Set("rocketLockSeconds", 0.1f);
         Set("rocketTrackSpeed", 1000f);
-        Set("rocketAggressionCurve", AnimationCurve.Constant(0f, 1f, 1f)); // every volley tracks
 
         var player = new GameObject("Player").transform;
         player.position = new Vector3(-6f, 2f, 0f);
@@ -106,8 +105,7 @@ public class SpawnManagerTests
         int launched = 0;
         spawner.RocketSpawned += () => launched++;
         yield return null;
-        manager.BeginRun();
-        manager.AddDistance(100000f);
+        manager.BeginRun(); // distance 0: tracking applies from the very start of a run
 
         for (float t = 0f; t < 3f && launched == 0; t += Time.deltaTime) yield return null;
         yield return null;
@@ -125,6 +123,49 @@ public class SpawnManagerTests
             for (int j = i + 1; j < ys.Count; j++)
                 Assert.GreaterOrEqual(Mathf.Abs(ys[i] - ys[j]), SpawnManager.MinRocketPairGap - 1e-3f, "volley keeps a flyable lane");
         Object.DestroyImmediate(player.gameObject);
+    }
+
+    [UnityTest]
+    public IEnumerator RocketLoop_MultiRocketVolley_LaunchesEveryRocket()
+    {
+        var (spawner, manager, pool) = Build();
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var config = (GameConfig)typeof(SpawnManager).GetField("config", flags).GetValue(spawner);
+        void Set(string field, object value) => typeof(GameConfig).GetField(field, flags).SetValue(config, value);
+        Set("baseRocketSpawnInterval", 1.2f);
+        Set("minRocketSpawnInterval", 1.2f);
+        Set("rocketTrackSecondsEarly", 0.3f);
+        Set("rocketTrackSecondsLate", 0.3f);
+        Set("rocketLockSeconds", 0.1f);
+        typeof(SpawnManager).GetField("rocketPairsFromMeters", flags).SetValue(spawner, 0f);
+        typeof(SpawnManager).GetField("rocketTriplesFromMeters", flags).SetValue(spawner, 0f);
+
+        // Player mid-band: the tracker locks near 0, close to where fixed rockets usually sit.
+        var player = new GameObject("Player").transform;
+        player.position = new Vector3(-6f, 0f, 0f);
+        typeof(SpawnManager).GetField("player", flags).SetValue(spawner, player);
+
+        var sizes = new System.Collections.Generic.List<int>();
+        var launched = new System.Collections.Generic.List<int>();
+        spawner.RocketVolleyStarted += size => { sizes.Add(size); launched.Add(0); };
+        spawner.RocketSpawned += () => { if (launched.Count > 0) launched[launched.Count - 1]++; };
+
+        int CompletedMultiVolleys()
+        {
+            int n = 0;
+            for (int i = 0; i < sizes.Count - 1; i++) if (sizes[i] >= 2) n++;
+            return n;
+        }
+
+        yield return null;
+        manager.BeginRun();
+        for (float t = 0f; t < 20f && CompletedMultiVolleys() < 3; t += Time.deltaTime) yield return null;
+        manager.EndRun();
+        Object.DestroyImmediate(player.gameObject);
+
+        Assert.GreaterOrEqual(CompletedMultiVolleys(), 3, "saw multi-rocket volleys");
+        for (int i = 0; i < sizes.Count - 1; i++)
+            Assert.AreEqual(sizes[i], launched[i], $"volley {i} of {sizes[i]} rockets launched all of them");
     }
 
     [UnityTest]

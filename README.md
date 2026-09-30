@@ -36,8 +36,8 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | Script | Attached To | Description |
 |---|---|---|
 | `Core/GameManager` | `GameManager` | Central state machine (`GameState`: `GetReady`/`Running`/`GameOver`). Owns distance, coins, score, and persisted high score (`PlayerPrefs`); fires `StateChanged`/`DistanceChanged`/`CoinsChanged`/`ScoreChanged` events. |
-| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curves, rocket lock-on timing (track/lock seconds, track speed), coin value, restart lockout. |
-| `Core/DifficultyEvaluator` | (static, no GameObject) | Pure function mapping distance travelled → a `DifficultySnapshot` (scroll speed, spawn intervals, rocket aggression), driven by `GameConfig`'s curves. |
+| `Core/GameConfig` | ScriptableObject asset | Tunable balance values: scroll speed curve, jetpack thrust/gravity, rocket and zapper speed multipliers, obstacle/rocket spawn intervals, difficulty ramp curve, rocket lock-on timing (track/lock seconds, track speed), coin value, restart lockout. |
+| `Core/DifficultyEvaluator` | (static, no GameObject) | Pure function mapping distance travelled → a `DifficultySnapshot` (scroll speed, spawn intervals, ramp progress), driven by `GameConfig`'s curves. |
 | `Core/DistanceTracker` | `DistanceTracker` | Ticks `GameManager.AddDistance()` each frame using the current scroll speed while `Running`. |
 | `Core/RunResetService` | `RunResetService` | On transition to `GetReady`, despawns every pooled hazard/coin so a new run starts clean. |
 | `Environment/ParallaxLayer` | `Background_1` / `Background_2` | Infinite horizontal scroll: wraps a tile back by `TileWidth * TileCount` once it scrolls past `-TileWidth`, so multiple equal-speed tiles stay offset instead of converging. |
@@ -53,7 +53,7 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 | `Pickups/CoinBehaviour` | `Coin` prefab | Tracks collected state, spawns the coin sparkle FX, and returns itself to the pool once collected. |
 | `Pooling/ObjectPoolManager` | `ObjectPoolManager` | Generic id-keyed object pools (`UnityEngine.Pool.ObjectPool`) for hazards, rockets, and coins; notifies `IPoolable` components on spawn/despawn. |
 | `Pooling/IPoolable` | (interface) | `OnSpawned()`/`OnDespawned()` hooks implemented by pooled components to reset per-spawn state. |
-| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle, rocket, and coin spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. Zappers come in mixed orientations/lengths and pair up late in the ramp, laid out by `ZapperLayout` so an open lane (`MinZapperLane`) always exists; rockets come in distance-based volleys of 1–3 (`rocketPairsFromMeters`, `rocketTriplesFromMeters`), each with its own warning, one of which may lock on; coins come only in `CoinPatterns` batches. Tracks live coins/zappers so they keep `CoinZapperClearance` apart (`SpawnSafety`). |
+| `Spawning/SpawnManager` | `SpawnManager` | Runs independent obstacle, rocket, and coin spawn loops timed by `DifficultyEvaluator`, spawning from the pool and configuring each instance's `HazardMover`. Zappers come in mixed orientations/lengths and pair up late in the ramp, laid out by `ZapperLayout` so an open lane (`MinZapperLane`) always exists; rockets come in distance-based volleys of 1–3 (`rocketPairsFromMeters`, `rocketTriplesFromMeters`), each with its own warning; one locks on and launches after the fixed ones; coins come only in `CoinPatterns` batches. Tracks live coins/zappers so they keep `CoinZapperClearance` apart (`SpawnSafety`). |
 | `Audio/AudioManager` | `AudioManager` | Observer on `GameManager`/`PlayerController`/`SpawnManager` events: switches menu/gameplay music and plays coin, death, rocket-launch SFX and the jetpack loop. |
 | `UI/UIManager` | `UIManager` | Switches Title/HUD/Game Over panels per `GameState` and updates distance/coins/high-score text. |
 
@@ -85,9 +85,9 @@ The core gameplay flow is managed by a centralized state machine via `GameManage
 * Get Ready → Running → Game Over state machine with event-driven UI updates.
 * Jetpack thrust/gravity physics with player bounds clamping.
 * Object pooling for obstacles, rockets, and coins (no runtime allocation churn).
-* Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket lock-on chance all scale with distance travelled.
+* Distance-driven difficulty ramp: scroll speed, obstacle/rocket spawn rate, and rocket lock-on track time all scale with distance travelled.
 * Rockets scroll faster than static zapper obstacles (`GameConfig.RocketSpeedMultiplier`) and fly straight.
-* Rocket lock-on: in some volleys (chance from `RocketAggressionCurve`) one warning follows the player's height (capped speed) for 2s early / 1s late, blinks red for 0.3s as it locks, then the rocket launches straight at the locked height.
+* Rocket lock-on: from the start of a run, every volley has one warning that follows the player's height (capped speed), blinks red for 0.3s as it locks, then the rocket launches straight at the locked height. In a multi-rocket volley the other rockets are fixed: they get the normal 0.5s warning and launch first, so none is dropped and they never form a wall with the tracked one. The track time shrinks from 2s early to 1s at full difficulty (`GameConfig.RocketTrackSeconds`) — that is the rocket difficulty.
 * Zapper speed is independently tunable (`GameConfig.ZapperSpeedMultiplier`; `1.0` = locked to the background).
 * Vertical, horizontal, and ±45° diagonal zappers in three lengths (9-sliced sprite, 4-frame flicker); only vertical early on, and a cluster always leaves a flyable lane (`ZapperLayout`).
 * Coins and zappers keep at least 1 unit apart for as long as both are on screen, even when zappers drift (`SpawnSafety`); coins re-roll their height or skip, zappers shift or evict the coins in their way.
