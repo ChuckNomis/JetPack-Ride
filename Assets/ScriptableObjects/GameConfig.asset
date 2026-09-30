@@ -15,7 +15,7 @@ MonoBehaviour:
   baseScrollSpeed: 15
   scrollSpeedPerMeter: 0.005
   maxScrollSpeed: 26
-  jetpackThrust: 80
+  jetpackThrust: 70
   gravityScale: 4
   rocketSpeedMultiplier: 1.5
   zapperSpeedMultiplier: 0.6
