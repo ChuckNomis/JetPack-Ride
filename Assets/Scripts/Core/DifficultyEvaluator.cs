@@ -7,15 +7,13 @@ namespace JetpackRide.Core
         public readonly float ScrollSpeed;
         public readonly float ObstacleSpawnInterval;
         public readonly float RocketSpawnInterval;
-        public readonly float RocketAggression;
         public readonly float RampProgress01;
 
-        public DifficultySnapshot(float scrollSpeed, float obstacleSpawnInterval, float rocketSpawnInterval, float rocketAggression, float rampProgress01)
+        public DifficultySnapshot(float scrollSpeed, float obstacleSpawnInterval, float rocketSpawnInterval, float rampProgress01)
         {
             ScrollSpeed = scrollSpeed;
             ObstacleSpawnInterval = obstacleSpawnInterval;
             RocketSpawnInterval = rocketSpawnInterval;
-            RocketAggression = rocketAggression;
             RampProgress01 = rampProgress01;
         }
     }
@@ -38,9 +36,8 @@ namespace JetpackRide.Core
 
             float obstacleInterval = Mathf.Lerp(config.BaseObstacleSpawnInterval, config.MinObstacleSpawnInterval, curveT);
             float rocketInterval = Mathf.Lerp(config.BaseRocketSpawnInterval, config.MinRocketSpawnInterval, curveT);
-            float rocketAggression = Mathf.Clamp01(config.RocketAggressionCurve.Evaluate(rampT));
 
-            return new DifficultySnapshot(scrollSpeed, obstacleInterval, rocketInterval, rocketAggression, rampT);
+            return new DifficultySnapshot(scrollSpeed, obstacleInterval, rocketInterval, rampT);
         }
     }
 }
