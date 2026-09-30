@@ -26,40 +26,46 @@ namespace JetpackRide.Spawning
             return Build(CoinPatternKind.Line, offsets);
         }
 
+        // Filled hump: `count` columns whose tops trace a half sine of arcHeight; each column hangs
+        // down from its top in steps of `spacing` for as long as it stays at or above the base.
         public static CoinPattern Arc(int count, float spacing, float arcHeight)
         {
             count = Mathf.Max(3, count);
-            var offsets = new Vector2[count];
+            var offsets = new List<Vector2>(count);
             for (int i = 0; i < count; i++)
-                offsets[i] = new Vector2(i * spacing, arcHeight * Mathf.Sin(Mathf.PI * i / (count - 1)));
-            return Build(CoinPatternKind.Arc, offsets);
+            {
+                float top = arcHeight * Mathf.Sin(Mathf.PI * i / (count - 1));
+                for (float y = top; y >= -1e-4f; y -= Mathf.Max(spacing, 0.01f)) // guard: spacing <= 0 would never end
+                    offsets.Add(new Vector2(i * spacing, Mathf.Max(0f, y)));
+            }
+            return Build(CoinPatternKind.Arc, offsets.ToArray());
         }
 
-        // ">" chevron: two arms of `armLength` coins meeting at a shared tip on the right.
+        // Filled ">" chevron: two arms of `armLength` coins meeting at a shared tip on the right,
+        // with every column filled between them (armLength^2 coins).
         public static CoinPattern Arrow(int armLength, float spacing)
         {
             armLength = Mathf.Max(2, armLength);
-            var offsets = new List<Vector2>(2 * armLength - 1);
+            var offsets = new List<Vector2>(armLength * armLength);
             for (int i = 0; i < armLength; i++)
             {
-                float rise = (armLength - 1 - i) * spacing;
-                offsets.Add(new Vector2(i * spacing, rise));
-                if (rise > 0f) offsets.Add(new Vector2(i * spacing, -rise));
+                int rise = armLength - 1 - i;
+                for (int r = -rise; r <= rise; r++)
+                    offsets.Add(new Vector2(i * spacing, r * spacing));
             }
             return Build(CoinPatternKind.Arrow, offsets.ToArray());
         }
 
-        // Hollow cols x rows square outline.
+        // Filled cols x rows block (squarer and taller than Rect's sizes in Pick).
         public static CoinPattern Box(int cols, int rows, float spacing)
         {
             cols = Mathf.Max(2, cols);
             rows = Mathf.Max(2, rows);
-            var offsets = new List<Vector2>();
+            var offsets = new Vector2[cols * rows];
             for (int c = 0; c < cols; c++)
                 for (int r = 0; r < rows; r++)
-                    if (c == 0 || c == cols - 1 || r == 0 || r == rows - 1)
-                        offsets.Add(new Vector2(c * spacing, r * spacing));
-            return Build(CoinPatternKind.Box, offsets.ToArray());
+                    offsets[c * rows + r] = new Vector2(c * spacing, r * spacing);
+            return Build(CoinPatternKind.Box, offsets);
         }
 
         // Filled cols x rows grid.
