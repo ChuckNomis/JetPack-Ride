@@ -439,6 +439,7 @@ GameObject:
   - component: {fileID: 148516768}
   - component: {fileID: 148516771}
   - component: {fileID: 148516772}
+  - component: {fileID: 148516773}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -576,6 +577,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 080a7a05fbf888849a46cda7e5528b9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Environment.CameraShake
+--- !u!114 &148516773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 148516767}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 345f5bbe210694449b7858a2aa2d1a7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: JetpackRide.Runtime::JetpackRide.Environment.CameraLetterbox
+  targetWidth: 1920
+  targetHeight: 1080
 --- !u!1 &237644441
 GameObject:
   m_ObjectHideFlags: 0
@@ -2620,7 +2635,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 60, y: -158.96002}
-  m_SizeDelta: {x: 0, y: 51.92}
+  m_SizeDelta: {x: 18.11, y: 51.92}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1429862908
 MonoBehaviour:
