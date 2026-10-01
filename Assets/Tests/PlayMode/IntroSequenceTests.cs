@@ -95,6 +95,27 @@ public class IntroSequenceTests
     }
 
     [UnityTest]
+    public IEnumerator StartIntro_SpawnsWallBlast_AtLeftWall()
+    {
+        var rig = Build();
+        var blastPrefab = new GameObject("BlastPrefab");
+        typeof(IntroSequence).GetField("wallBlastPrefab", Flags).SetValue(rig.Intro, blastPrefab);
+        typeof(IntroSequence).GetField("wallX", Flags).SetValue(rig.Intro, -9.6f);
+        typeof(IntroSequence).GetField("blastHeight", Flags).SetValue(rig.Intro, 0.5f);
+        yield return null;
+
+        rig.Manager.StartIntro();
+        var blast = GameObject.Find("BlastPrefab(Clone)");
+        Assert.IsNotNull(blast, "wall blast spawned as the intro starts");
+        Assert.AreEqual(-9.6f, blast.transform.position.x, 1e-3f);
+        Assert.AreEqual(-3.5f + 0.5f, blast.transform.position.y, 1e-3f, "blastHeight above the floor");
+
+        Object.DestroyImmediate(blast);
+        Object.DestroyImmediate(blastPrefab);
+        rig.Destroy();
+    }
+
+    [UnityTest]
     public IEnumerator NoCameraShake_StillBeginsRun()
     {
         var rig = Build(withShake: false);

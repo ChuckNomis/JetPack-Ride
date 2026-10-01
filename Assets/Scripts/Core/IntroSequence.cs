@@ -5,7 +5,8 @@ using JetpackRide.Player;
 namespace JetpackRide.Core
 {
     // Observer on GameManager.StateChanged: on Intro, puts the player off-screen left on the floor,
-    // shakes the camera (AudioManager plays the explosion on the same state change), pauses, walks the
+    // blows wall debris out of the left edge and shakes the camera (AudioManager plays the explosion
+    // on the same state change), pauses, walks the
     // player to its home X while the world stands still, then starts the run. Any state change,
     // destroy, or newer intro makes an in-flight sequence stop without calling BeginRun.
     public class IntroSequence : MonoBehaviour
@@ -13,6 +14,12 @@ namespace JetpackRide.Core
         [SerializeField] private GameManager gameManager;
         [SerializeField] private PlayerController player;
         [SerializeField] private CameraShake cameraShake;
+        [Tooltip("One-shot FX spawned at the left wall as the intro starts (self-destroying).")]
+        [SerializeField] private GameObject wallBlastPrefab;
+        [Tooltip("World X of the wall the player bursts through (the screen's left edge).")]
+        [SerializeField] private float wallX = -9.6f;
+        [Tooltip("Height of the blast centre above the player's floor Y.")]
+        [SerializeField] private float blastHeight = 0.5f;
         [Tooltip("World X the player starts at (just off-screen left).")]
         [SerializeField] private float startX = -11f;
         [SerializeField] private float shakeSeconds = 0.4f;
@@ -51,6 +58,8 @@ namespace JetpackRide.Core
         private async Awaitable PlayAsync(int gen)
         {
             PlaceAt(startX);
+            if (wallBlastPrefab != null)
+                Instantiate(wallBlastPrefab, new Vector3(wallX, player.MinY + blastHeight, 0f), Quaternion.identity);
             if (cameraShake != null) cameraShake.Shake(shakeSeconds, shakeStrength).Forget();
 
             await Awaitable.WaitForSecondsAsync(shakeSeconds + pauseSeconds);
