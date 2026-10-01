@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using JetpackRide.Core;
 using JetpackRide.Input;
 using JetpackRide.Pickups;
@@ -23,6 +25,7 @@ namespace JetpackRide.Player
         private Rigidbody2D body;
         private PlayerInputActions actions;
         private bool pendingThrustHeld;
+        private bool ignoreThrustUntilRelease;
         private bool thrusting;
 
         private void Awake()
@@ -55,7 +58,30 @@ namespace JetpackRide.Player
 
         private void Update()
         {
-            pendingThrustHeld = actions.Gameplay.Thrust.IsPressed();
+            // A click that starts on a UI button (the HUD pause button) belongs to the button, not the
+            // jetpack. Only pointer presses count, so Space with the cursor resting on the button still thrusts.
+            var thrust = actions.Gameplay.Thrust;
+            if (thrust.WasPressedThisFrame() && thrust.activeControl?.device is Pointer pointer
+                && IsOverButton(pointer.position.ReadValue()))
+                ignoreThrustUntilRelease = true;
+            if (!thrust.IsPressed()) ignoreThrustUntilRelease = false;
+
+            pendingThrustHeld = thrust.IsPressed() && !ignoreThrustUntilRelease;
+        }
+
+        // Buttons only: HUD text is also a raycast target, and clicking over it should still thrust.
+        private static bool IsOverButton(Vector2 screenPosition)
+        {
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null) return false;
+
+            var hits = new System.Collections.Generic.List<RaycastResult>();
+            eventSystem.RaycastAll(new PointerEventData(eventSystem) { position = screenPosition }, hits);
+            foreach (var hit in hits)
+            {
+                if (hit.gameObject.GetComponentInParent<UnityEngine.UI.Selectable>() != null) return true;
+            }
+            return false;
         }
 
         private void FixedUpdate()

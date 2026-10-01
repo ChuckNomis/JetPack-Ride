@@ -558,12 +558,14 @@ namespace JetpackRide.EditorTools
 
         // Pause menu: a dimmed full-screen PausePanel on top of the Canvas with a "Paused" title and
         // Continue / Restart buttons (Art/Sprites/ButtonBlank, the Play Game button with its text
-        // removed, 9-sliced so it stretches), driven by a PauseMenu on the UIManager. Idempotent.
+        // removed, 9-sliced so it stretches), driven by a PauseMenu on the UIManager. Also adds the HUD
+        // PauseButton (Art/Sprites/pauseButton) at the top right, level with DistanceText. Idempotent.
         // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePauseMenu
         [MenuItem("Jetpack Ride/Wire Pause Menu")]
         public static void WirePauseMenu()
         {
             var buttonSprite = ImportButtonBlank();
+            var pauseSprite = ImportPauseButton();
             var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
             var gameManager = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>()
                 ?? throw new InvalidOperationException("No GameManager in " + MainScenePath);
@@ -592,6 +594,13 @@ namespace JetpackRide.EditorTools
             var restartButton = NewMenuButton("RestartButton", panel, buttonSprite, font, "Restart", new Vector2(0f, -130f));
             panel.gameObject.SetActive(false);
 
+            // Directly under the Canvas, not in HUDPanel: HUDPanel is hidden during the intro, and the
+            // button must show there too. Placed just below PausePanel so the dimmed overlay covers it.
+            var existingPauseButton = canvas.transform.Find("PauseButton");
+            if (existingPauseButton != null) UnityEngine.Object.DestroyImmediate(existingPauseButton.gameObject);
+            var pauseButton = NewPauseButton(canvas.transform, pauseSprite);
+            pauseButton.transform.SetSiblingIndex(panel.GetSiblingIndex());
+
             if (!uiManager.TryGetComponent<JetpackRide.UI.PauseMenu>(out var pauseMenu))
                 pauseMenu = uiManager.gameObject.AddComponent<JetpackRide.UI.PauseMenu>();
             var so = new SerializedObject(pauseMenu);
@@ -599,6 +608,7 @@ namespace JetpackRide.EditorTools
             so.FindProperty("pausePanel").objectReferenceValue = panel.gameObject;
             so.FindProperty("continueButton").objectReferenceValue = continueButton;
             so.FindProperty("restartButton").objectReferenceValue = restartButton;
+            so.FindProperty("pauseButton").objectReferenceValue = pauseButton;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
@@ -625,6 +635,50 @@ namespace JetpackRide.EditorTools
             importer.SetTextureSettings(settings);
             importer.SaveAndReimport();
             return LoadSprite("ButtonBlank");
+        }
+
+        // Pixel art drawn far below its 1216px source size, so mipmaps keep it from shimmering. Single
+        // mode: the auto-slicer splits the icon into its two bars.
+        private static Sprite ImportPauseButton()
+        {
+            var path = $"{SpriteDir}/pauseButton.png";
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path)
+                ?? throw new InvalidOperationException("Missing " + path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = true;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+            return LoadSprite("pauseButton");
+        }
+
+        // Top-right, centred on DistanceText's row (its centre sits 86.5 below the top edge).
+        private static UnityEngine.UI.Button NewPauseButton(Transform parent, Sprite sprite)
+        {
+            const float size = 80f;
+            var rect = NewUiObject("PauseButton", parent);
+            rect.anchorMin = Vector2.one;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = Vector2.one;
+            rect.sizeDelta = new Vector2(size, size);
+            rect.anchoredPosition = new Vector2(-40f, -86.5f + size / 2f);
+            var image = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            var button = rect.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var colors = button.colors;
+            colors.normalColor = new Color(0.82f, 0.82f, 0.82f);
+            colors.highlightedColor = Color.white;
+            colors.selectedColor = new Color(0.82f, 0.82f, 0.82f); // a click leaves it selected; don't stay lit
+            colors.pressedColor = new Color(0.6f, 0.6f, 0.6f);
+            colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+            button.colors = colors;
+            // Keyboard/gamepad focus never lands here, so Space/Enter can't press it.
+            button.navigation = new UnityEngine.UI.Navigation { mode = UnityEngine.UI.Navigation.Mode.None };
+            return button;
         }
 
         private static RectTransform NewUiObject(string name, Transform parent)
