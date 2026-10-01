@@ -463,6 +463,293 @@ namespace JetpackRide.EditorTools
             Debug.Log("[PrefabBuilder] Start intro wired (IntroSequence, CameraShake, startExplosionSfx).");
         }
 
+        // Intro wall blast: tumbling steel wall chunks that fly out of the left edge, fall and bounce on
+        // the floor, over a fire flash and a smoke puff. Wires it into MainGame's IntroSequence. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.BuildWallBlast
+        [MenuItem("Jetpack Ride/Build Intro Wall Blast")]
+        public static void BuildWallBlast()
+        {
+            var dotMaterial = EnsureParticleMaterial();
+            var chunkMaterial = EnsureChunkMaterial();
+            const string prefabName = "FX_WallBlast";
+            // Floor (the player's feet at MinY) relative to the blast centre, which sits blastHeight above MinY.
+            const float floorLocalY = -1.1f;
+
+            var root = new GameObject(prefabName);
+            try
+            {
+                // Chunks on the root: it lives longest, so StopAction.Destroy cleans up the children too.
+                var chunks = AddParticleSystem(root, chunkMaterial, "Player", sortingOrder: 5);
+                var main = chunks.main;
+                main.loop = false;
+                main.playOnAwake = true;
+                main.duration = 0.1f;
+                main.stopAction = ParticleSystemStopAction.Destroy;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.4f, 2f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(7f, 17f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.15f, 0.5f);
+                main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.72f, 0.78f, 0.85f), new Color(0.22f, 0.3f, 0.45f));
+                main.gravityModifier = 2.2f;
+                var emission = chunks.emission;
+                emission.rateOverTime = 0f;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 45) });
+                var shape = chunks.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 40f;
+                shape.radius = 1.2f;                       // a wall-height section breaking at once
+                shape.rotation = new Vector3(-15f, 90f, 0f); // cone faces +X, tipped slightly upward
+                var spin = chunks.rotationOverLifetime;
+                spin.enabled = true;
+                spin.z = new ParticleSystem.MinMaxCurve(-4f * Mathf.PI, 4f * Mathf.PI);
+                var fade = chunks.colorOverLifetime;
+                fade.enabled = true;
+                var gradient = new Gradient();
+                gradient.SetKeys(
+                    new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                    new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.75f), new GradientAlphaKey(0f, 1f) });
+                fade.color = gradient;
+
+                var floor = new GameObject("Floor").transform; // collision plane normal = its +Y
+                floor.SetParent(root.transform, false);
+                floor.localPosition = new Vector3(0f, floorLocalY, 0f);
+                var collision = chunks.collision;
+                collision.enabled = true;
+                collision.type = ParticleSystemCollisionType.Planes;
+                collision.SetPlane(0, floor);
+                collision.dampen = 0.45f;
+                collision.bounce = 0.35f;
+                collision.radiusScale = 0.5f;
+
+                var fire = AddParticleSystem(new GameObject("Fire"), dotMaterial, "Player", sortingOrder: 4, root.transform);
+                ConfigureChildBurst(fire, burstCount: 30, lifetime: new ParticleSystem.MinMaxCurve(0.3f, 0.55f),
+                    speed: new ParticleSystem.MinMaxCurve(4f, 11f), size: new ParticleSystem.MinMaxCurve(0.8f, 2f),
+                    color: new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.4f), new Color(1f, 0.35f, 0.05f)), coneAngle: 55f);
+                FadeOut(fire, new Color(0.35f, 0.1f, 0.05f));
+
+                var smoke = AddParticleSystem(new GameObject("Smoke"), dotMaterial, "Player", sortingOrder: 3, root.transform);
+                ConfigureChildBurst(smoke, burstCount: 18, lifetime: new ParticleSystem.MinMaxCurve(0.9f, 1.4f),
+                    speed: new ParticleSystem.MinMaxCurve(1.5f, 4f), size: new ParticleSystem.MinMaxCurve(1.5f, 3f),
+                    color: new ParticleSystem.MinMaxGradient(new Color(0.55f, 0.58f, 0.62f, 0.55f), new Color(0.3f, 0.32f, 0.36f, 0.55f)), coneAngle: 70f);
+                var grow = smoke.sizeOverLifetime;
+                grow.enabled = true;
+                grow.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 1.4f));
+                FadeOut(smoke, new Color(0.4f, 0.42f, 0.45f));
+
+                PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabDir}/{prefabName}.prefab");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var intro = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.IntroSequence>()
+                ?? throw new InvalidOperationException("No IntroSequence in " + MainScenePath + " (run Wire Start Intro first)");
+            var so = new SerializedObject(intro);
+            so.FindProperty("wallBlastPrefab").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabDir}/{prefabName}.prefab");
+            so.ApplyModifiedPropertiesWithoutUndo();
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PrefabBuilder] Intro wall blast built and wired.");
+        }
+
+        // Pause menu: a dimmed full-screen PausePanel on top of the Canvas with a "Paused" title and
+        // Continue / Restart buttons (Art/Sprites/ButtonBlank, the Play Game button with its text
+        // removed, 9-sliced so it stretches), driven by a PauseMenu on the UIManager. Idempotent.
+        // Batchmode: ... -executeMethod JetpackRide.EditorTools.PrefabBuilder.WirePauseMenu
+        [MenuItem("Jetpack Ride/Wire Pause Menu")]
+        public static void WirePauseMenu()
+        {
+            var buttonSprite = ImportButtonBlank();
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainScenePath);
+            var gameManager = UnityEngine.Object.FindAnyObjectByType<JetpackRide.Core.GameManager>()
+                ?? throw new InvalidOperationException("No GameManager in " + MainScenePath);
+            var uiManager = UnityEngine.Object.FindAnyObjectByType<JetpackRide.UI.UIManager>()
+                ?? throw new InvalidOperationException("No UIManager in " + MainScenePath);
+            var canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>()
+                ?? throw new InvalidOperationException("No Canvas in " + MainScenePath);
+            // Reuse the HUD's font so the menu matches the rest of the UI.
+            var font = canvas.GetComponentInChildren<TMPro.TMP_Text>(true).font;
+
+            var existing = canvas.transform.Find("PausePanel");
+            if (existing != null) UnityEngine.Object.DestroyImmediate(existing.gameObject);
+
+            var panel = NewUiObject("PausePanel", canvas.transform);
+            panel.anchorMin = Vector2.zero;
+            panel.anchorMax = Vector2.one;
+            panel.sizeDelta = Vector2.zero;
+            panel.SetAsLastSibling(); // drawn over the HUD
+            panel.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color(0f, 0f, 0.05f, 0.6f);
+
+            var title = NewLabel("Title", panel, font, "Paused", 110f);
+            title.rectTransform.anchoredPosition = new Vector2(0f, 190f);
+            title.rectTransform.sizeDelta = new Vector2(900f, 140f);
+
+            var continueButton = NewMenuButton("ContinueButton", panel, buttonSprite, font, "Continue", new Vector2(0f, 20f));
+            var restartButton = NewMenuButton("RestartButton", panel, buttonSprite, font, "Restart", new Vector2(0f, -130f));
+            panel.gameObject.SetActive(false);
+
+            if (!uiManager.TryGetComponent<JetpackRide.UI.PauseMenu>(out var pauseMenu))
+                pauseMenu = uiManager.gameObject.AddComponent<JetpackRide.UI.PauseMenu>();
+            var so = new SerializedObject(pauseMenu);
+            so.FindProperty("gameManager").objectReferenceValue = gameManager;
+            so.FindProperty("pausePanel").objectReferenceValue = panel.gameObject;
+            so.FindProperty("continueButton").objectReferenceValue = continueButton;
+            so.FindProperty("restartButton").objectReferenceValue = restartButton;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            Debug.Log("[PrefabBuilder] Pause menu wired.");
+        }
+
+        // Caps are the button's rounded ends (17px), so only the plain middle stretches.
+        private static Sprite ImportButtonBlank()
+        {
+            var path = $"{SpriteDir}/ButtonBlank.png";
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path)
+                ?? throw new InvalidOperationException("Missing " + path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.spriteBorder = new Vector4(17f, 0f, 17f, 0f);
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect; // required for sliced drawing
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+            return LoadSprite("ButtonBlank");
+        }
+
+        private static RectTransform NewUiObject(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.layer = LayerMask.NameToLayer("UI");
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            return rect;
+        }
+
+        private static TMPro.TextMeshProUGUI NewLabel(string name, Transform parent, TMPro.TMP_FontAsset font, string text, float size)
+        {
+            var label = NewUiObject(name, parent).gameObject.AddComponent<TMPro.TextMeshProUGUI>();
+            label.font = font;
+            label.text = text;
+            label.fontSize = size;
+            label.alignment = TMPro.TextAlignmentOptions.Center;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        private static UnityEngine.UI.Button NewMenuButton(string name, Transform parent, Sprite sprite,
+            TMPro.TMP_FontAsset font, string text, Vector2 position)
+        {
+            var rect = NewUiObject(name, parent);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(440f, 118f);
+            var image = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
+            image.sprite = sprite;
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 0.5f; // caps drawn at 2x, matching the button's height scale
+            var button = rect.gameObject.AddComponent<UnityEngine.UI.Button>();
+            var colors = button.colors;
+            // Tint multiplies the sprite, so rest slightly dimmed and light up on hover/selection.
+            colors.normalColor = new Color(0.82f, 0.82f, 0.82f);
+            colors.highlightedColor = Color.white;
+            colors.selectedColor = Color.white;
+            colors.pressedColor = new Color(0.6f, 0.6f, 0.6f);
+            button.colors = colors;
+
+            var label = NewLabel("Label", rect, font, text, 64f);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.sizeDelta = Vector2.zero;
+            return button;
+        }
+
+        private static ParticleSystem AddParticleSystem(GameObject go, Material material, string sortingLayer,
+            int sortingOrder, Transform parent = null)
+        {
+            if (parent != null) go.transform.SetParent(parent, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.sortingLayerName = sortingLayer;
+            renderer.sortingOrder = sortingOrder;
+            return ps;
+        }
+
+        // Rightward cone burst for the wall blast's child systems (the root owns the Destroy stop action).
+        private static void ConfigureChildBurst(ParticleSystem ps, int burstCount, ParticleSystem.MinMaxCurve lifetime,
+            ParticleSystem.MinMaxCurve speed, ParticleSystem.MinMaxCurve size, ParticleSystem.MinMaxGradient color, float coneAngle)
+        {
+            var main = ps.main;
+            main.loop = false;
+            main.playOnAwake = true;
+            main.duration = 0.1f;
+            main.startLifetime = lifetime;
+            main.startSpeed = speed;
+            main.startSize = size;
+            main.startColor = color;
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)burstCount) });
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = coneAngle;
+            shape.radius = 1f;
+            shape.rotation = new Vector3(0f, 90f, 0f); // cone faces +X
+        }
+
+        // Hard-edged bevelled square (light top-left, dark bottom-right) so debris reads as metal plates.
+        private static Material EnsureChunkMaterial()
+        {
+            const string texPath = "Assets/Art/Sprites/FX_Chunk.png";
+            const string matPath = "Assets/Art/Materials/FX_Chunk.mat";
+
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(texPath) == null)
+            {
+                const int n = 16;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+                for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float shade = 0.85f;
+                    if (x < 2 || y >= n - 2) shade = 1f;          // lit edges
+                    if (x >= n - 2 || y < 2) shade = 0.55f;       // shadowed edges
+                    tex.SetPixel(x, y, new Color(shade, shade, shade, 1f));
+                }
+                System.IO.File.WriteAllBytes(texPath, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(texPath);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(texPath);
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (material == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                    ?? throw new InvalidOperationException("URP 2D Sprite-Unlit-Default shader not found");
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, matPath);
+            }
+            material.mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         private const string RunFrameDir = SpriteDir + "/PlayerRun";
 
         // Imports PlayerRun_0..n with the same settings as PlayerFly (PPU 100, bilinear, no mips,
